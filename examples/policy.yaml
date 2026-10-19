@@ -1,0 +1,68 @@
+# Veto policy: what the argo.near agent may do with the owner's money.
+#
+# Read this as a contract. The agent can spend inside these walls and nothing
+# else. The policy is pinned by hash; the hash goes on-chain and into every
+# audit record, so a changed rule is visible after the fact.
+version: 1
+name: "argo-spending-policy"
+owner: alice.near
+agent: argo.near
+
+limits:
+  perTx:
+    NEAR: 1.5
+    USDC: 25
+  daily:
+    NEAR: 5
+    USDC: 100
+  monthly:
+    NEAR: 60
+    USDC: 800
+  defaultPerTxUsd: 20
+
+counterparties:
+  mode: strict
+  allow:
+    - api.data-market.near
+    - compute.near
+    - storage.near
+  deny:
+    - drainer.near
+  requireApprovalForNew: true
+
+approvals:
+  thresholdUsd: 10
+  approvers:
+    - alice.near
+  ttlSeconds: 900
+
+velocity:
+  maxTxPerHour: 6
+  minIntervalSeconds: 5
+
+actions:
+  allow:
+    - near.transfer
+    - ft.transfer
+    - intent.swap
+    - api.pay
+  deny:
+    - key.add
+    - key.delete
+    - contract.call
+    - stake.delegate
+
+intents:
+  venues:
+    - near-intents
+  maxSlippageBps: 100
+  requireAllowlistedDestination: true
+  # The only address this agent may ever receive swap output on. It is not a
+  # hardcoded string: it is the address NEAR chain signatures derives for
+  # (argo.near, "ethereum-1"). Verify with `node src/cli/veto.ts chainsig`.
+  allowedDestinations:
+    - "0x583ddbf02324f75c3963c45686d52afaf2368c2f"
+
+risk:
+  escalateAboveBudgetFraction: 0.8
+  escalateOnNewCounterparty: true

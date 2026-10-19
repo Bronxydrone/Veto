@@ -1,0 +1,10 @@
+﻿import { readFileSync } from "node:fs";
+import { loadPolicy, compilePolicy } from "./src/core/policy.ts";
+import { evaluate } from "./src/core/engine.ts";
+import { SpendLedger } from "./src/core/ledger.ts";
+import { PRICES, PINNED_DESTINATION, START } from "./src/demo/scenarios.ts";
+const p = compilePolicy(loadPolicy(readFileSync("examples/policy.yaml","utf8")).doc);
+const l = new SpendLedger([], START);
+const tx = evaluate(p, { id:"c1", kind:"ft.transfer", actor:"argo.near", asset:"USDC", amount:"20", to:"api.data-market.near" }, l, { now: START, prices: PRICES });
+const sw = evaluate(p, { id:"c2", kind:"intent.swap", actor:"argo.near", asset:"NEAR", amount:"1", quote:{ originAsset:"NEAR", destinationAddress: PINNED_DESTINATION, slippageBps:50, expiresAt:new Date(START+60000).toISOString() } }, l, { now: START, prices: PRICES });
+console.log("transfer checks:", tx.checks.length, "| swap checks:", sw.checks.length);

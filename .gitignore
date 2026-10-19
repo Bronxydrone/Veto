@@ -1,0 +1,11 @@
+node_modules/
+data/tmp-state/
+data/state/
+*.log
+.DS_Store
+contract/target/
+.env
+.env.*
+!.env.example
+# contains personal data (name, email, links) - never commit it
+submission.json

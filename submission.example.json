@@ -1,0 +1,13 @@
+{
+  "requestId": "",
+  "projectName": "Veto",
+  "leadName": "",
+  "email": "",
+  "size": "1",
+  "tracks": ["security", "agents"],
+  "nearAddress": "",
+  "projectUrl": "https://github.com/<account>/veto",
+  "demoUrl": "",
+  "idea": "",
+  "consent": false
+}

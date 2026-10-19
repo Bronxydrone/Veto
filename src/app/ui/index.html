@@ -1,0 +1,2086 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta
+      http-equiv="content-security-policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'"
+    />
+    <title>Veto — the spending firewall for AI agents</title>
+    <style>
+      /* ------------------------------------------------------------------ *
+       * Veto dashboard. Dark, dense, one page, no dependencies.
+       * ------------------------------------------------------------------ */
+      :root {
+        --bg: #080a0e;
+        --panel: #0f141c;
+        --panel-2: #121926;
+        --line: #1e2735;
+        --line-soft: #171f2b;
+        --text: #e9eef6;
+        --muted: #8e9bad;
+        --dim: #5b697b;
+        --green: #3ddc84;
+        --red: #ff5f6d;
+        --amber: #ffb020;
+        --blue: #6aa8ff;
+        --mono: ui-monospace, SFMono-Regular, "Cascadia Mono", Menlo, Consolas, monospace;
+        --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        min-height: 100vh;
+        background:
+          radial-gradient(1100px 520px at 50% -12%, rgba(48, 74, 110, 0.55) 0%, rgba(8, 10, 14, 0) 62%),
+          var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        font-size: 13px;
+        line-height: 1.45;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      code,
+      .mono {
+        font-family: var(--mono);
+        font-size: 11.5px;
+      }
+
+      /* -------------------------------- topbar --------------------------- */
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 12px 22px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(8, 10, 14, 0.86);
+        backdrop-filter: blur(12px);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .mark {
+        display: grid;
+        place-items: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 11px;
+        border: 1px solid rgba(61, 220, 132, 0.35);
+        background: linear-gradient(160deg, rgba(61, 220, 132, 0.16), rgba(61, 220, 132, 0.02));
+        color: var(--green);
+      }
+
+      .mark svg {
+        width: 21px;
+        height: 21px;
+        display: block;
+      }
+
+      .brand h1 {
+        margin: 0;
+        font-size: 19px;
+        letter-spacing: -0.015em;
+        font-weight: 650;
+      }
+
+      .tagline {
+        margin: 1px 0 0;
+        font-size: 11.5px;
+        color: var(--muted);
+        letter-spacing: 0.01em;
+      }
+
+      .topbar-right {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .pin {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--panel);
+      }
+
+      .pin .k {
+        font-size: 9.5px;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+        color: var(--dim);
+      }
+
+      .pin code {
+        color: var(--text);
+      }
+
+      .copy {
+        border: 1px solid var(--line);
+        background: transparent;
+        color: var(--muted);
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+
+      .copy:hover {
+        color: var(--text);
+        border-color: #2b3a4d;
+      }
+
+      .conn {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 11.5px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--dim);
+        box-shadow: 0 0 0 0 rgba(61, 220, 132, 0);
+      }
+
+      .dot[data-state="live"] {
+        background: var(--green);
+        animation: pulse 2.4s ease-out infinite;
+      }
+
+      .dot[data-state="down"] {
+        background: var(--red);
+      }
+
+      .dot[data-state="pending"] {
+        background: var(--amber);
+      }
+
+      @keyframes pulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(61, 220, 132, 0.45);
+        }
+        70% {
+          box-shadow: 0 0 0 7px rgba(61, 220, 132, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(61, 220, 132, 0);
+        }
+      }
+
+      /* --------------------------------- grid ---------------------------- */
+      main {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: 274px minmax(0, 1fr) 350px;
+        grid-template-areas:
+          "policy activity right"
+          "policy attacks  right"
+          "audit  audit    audit";
+        align-items: start;
+        max-width: 1680px;
+        margin: 0 auto;
+        padding: 14px 22px 30px;
+      }
+
+      .panel {
+        background: linear-gradient(180deg, #101620 0%, #0d121a 100%);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 14px 15px 15px;
+        min-width: 0;
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .panel h2 {
+        margin: 0;
+        font-size: 10.5px;
+        font-weight: 650;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .hint {
+        font-size: 10.5px;
+        color: var(--dim);
+      }
+
+      #policy-panel {
+        grid-area: policy;
+      }
+
+      #activity-panel {
+        grid-area: activity;
+      }
+
+      #attacks-panel {
+        grid-area: attacks;
+      }
+
+      #audit-panel {
+        grid-area: audit;
+      }
+
+      .col-right {
+        grid-area: right;
+        display: grid;
+        gap: 14px;
+        min-width: 0;
+      }
+
+      @media (max-width: 1180px) {
+        main {
+          grid-template-columns: minmax(0, 1fr);
+          grid-template-areas:
+            "policy"
+            "activity"
+            "right"
+            "attacks"
+            "audit";
+        }
+      }
+
+      /* ------------------------------- atoms ----------------------------- */
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        font-size: 10px;
+        font-weight: 650;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      .chip.allow {
+        color: var(--green);
+        background: rgba(61, 220, 132, 0.1);
+        border-color: rgba(61, 220, 132, 0.34);
+      }
+
+      .chip.deny {
+        color: var(--red);
+        background: rgba(255, 95, 109, 0.1);
+        border-color: rgba(255, 95, 109, 0.32);
+      }
+
+      .chip.approval {
+        color: var(--amber);
+        background: rgba(255, 176, 32, 0.1);
+        border-color: rgba(255, 176, 32, 0.3);
+      }
+
+      .chip.ghost,
+      .chip.neutral {
+        color: var(--muted);
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .pill {
+        display: inline-block;
+        padding: 1px 7px;
+        margin: 0 4px 4px 0;
+        border-radius: 6px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.025);
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 10.5px;
+      }
+
+      .pill.bad {
+        color: var(--red);
+        border-color: rgba(255, 95, 109, 0.3);
+      }
+
+      .code {
+        display: inline-block;
+        padding: 1px 6px;
+        border-radius: 5px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 10px;
+      }
+
+      .code.ok {
+        color: var(--green);
+        border-color: rgba(61, 220, 132, 0.3);
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 7px 12px;
+        border-radius: 9px;
+        border: 1px solid var(--line);
+        background: #141b26;
+        color: var(--text);
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: 550;
+        cursor: pointer;
+        transition: border-color 0.12s ease, background 0.12s ease, transform 0.06s ease;
+      }
+
+      .btn:hover {
+        border-color: #2f3f54;
+        background: #182130;
+      }
+
+      .btn:active {
+        transform: translateY(1px);
+      }
+
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: progress;
+      }
+
+      .btn.primary {
+        border-color: rgba(61, 220, 132, 0.45);
+        background: linear-gradient(180deg, rgba(61, 220, 132, 0.2), rgba(61, 220, 132, 0.1));
+        color: #dffbea;
+      }
+
+      .btn.primary:hover {
+        border-color: rgba(61, 220, 132, 0.7);
+      }
+
+      .btn.danger {
+        border-color: rgba(255, 95, 109, 0.35);
+        background: rgba(255, 95, 109, 0.08);
+        color: #ffd9dc;
+      }
+
+      .btn.good {
+        border-color: rgba(61, 220, 132, 0.4);
+        background: rgba(61, 220, 132, 0.12);
+        color: #d8fbe6;
+      }
+
+      .btn.subtle {
+        background: transparent;
+        color: var(--muted);
+      }
+
+      .btn.sm {
+        padding: 4px 9px;
+        font-size: 11px;
+        border-radius: 8px;
+      }
+
+      .empty {
+        margin: 0;
+        font-size: 11.5px;
+        color: var(--dim);
+        padding: 10px 0;
+      }
+
+      .dim {
+        color: var(--dim);
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      /* ------------------------------- policy ---------------------------- */
+      .policy-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+        word-break: break-word;
+      }
+
+      .id-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 5px 0;
+        border-bottom: 1px solid var(--line-soft);
+      }
+
+      .id-row:last-child {
+        border-bottom: none;
+      }
+
+      .id-row .k {
+        font-size: 10.5px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--dim);
+      }
+
+      .id-row .v {
+        font-family: var(--mono);
+        font-size: 11.5px;
+        color: var(--text);
+      }
+
+      .subhead {
+        margin: 14px 0 6px;
+        font-size: 9.5px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--dim);
+      }
+
+      table.limits {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+      }
+
+      table.limits th {
+        text-align: right;
+        font-weight: 500;
+        font-size: 9.5px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--dim);
+        padding: 3px 0;
+        border-bottom: 1px solid var(--line-soft);
+      }
+
+      table.limits th:first-child {
+        text-align: left;
+      }
+
+      table.limits td {
+        padding: 4px 0;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        border-bottom: 1px solid var(--line-soft);
+      }
+
+      table.limits tr:last-child td {
+        border-bottom: none;
+      }
+
+      table.limits td:first-child {
+        text-align: left;
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 10.5px;
+      }
+
+      .note {
+        margin: 14px 0 0;
+        padding: 9px 10px;
+        border-left: 2px solid rgba(61, 220, 132, 0.4);
+        background: rgba(61, 220, 132, 0.05);
+        border-radius: 0 8px 8px 0;
+        font-size: 10.5px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .note code {
+        color: #b6f5d0;
+      }
+
+      /* ------------------------------- form ------------------------------ */
+      .form-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.85fr) minmax(0, 0.8fr);
+        gap: 9px;
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+      }
+
+      .field label {
+        font-size: 9.5px;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+        color: var(--dim);
+      }
+
+      input[type="text"],
+      select {
+        width: 100%;
+        padding: 7px 9px;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: #0b1017;
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 12px;
+        appearance: none;
+      }
+
+      select {
+        background-image: linear-gradient(45deg, transparent 50%, var(--dim) 50%),
+          linear-gradient(135deg, var(--dim) 50%, transparent 50%);
+        background-position: calc(100% - 14px) 52%, calc(100% - 9px) 52%;
+        background-size: 5px 5px, 5px 5px;
+        background-repeat: no-repeat;
+        padding-right: 24px;
+      }
+
+      input[type="text"]:focus,
+      select:focus {
+        outline: none;
+        border-color: rgba(106, 168, 255, 0.55);
+        box-shadow: 0 0 0 2px rgba(106, 168, 255, 0.14);
+      }
+
+      .form-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 9px;
+        align-items: end;
+        margin-top: 9px;
+      }
+
+      .actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+
+      .presets {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-top: 10px;
+      }
+
+      .presets .lbl {
+        font-size: 9.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.11em;
+        color: var(--dim);
+        margin-right: 2px;
+      }
+
+      .preset {
+        border: 1px solid var(--line);
+        background: transparent;
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 10px;
+        padding: 3px 7px;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+
+      .preset:hover {
+        color: var(--text);
+        border-color: #2f3f54;
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .toggle {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 11px;
+        color: var(--muted);
+        cursor: pointer;
+        user-select: none;
+        white-space: nowrap;
+      }
+
+      .toggle input {
+        appearance: none;
+        width: 30px;
+        height: 17px;
+        border-radius: 999px;
+        background: #1b2431;
+        border: 1px solid var(--line);
+        position: relative;
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease;
+        flex: none;
+      }
+
+      .toggle input::after {
+        content: "";
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        background: var(--muted);
+        transition: transform 0.15s ease, background 0.15s ease;
+      }
+
+      .toggle input:checked {
+        background: rgba(255, 95, 109, 0.25);
+        border-color: rgba(255, 95, 109, 0.5);
+      }
+
+      .toggle input:checked::after {
+        transform: translateX(13px);
+        background: var(--red);
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      .swap-dest {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 7px 9px;
+        border: 1px dashed var(--line);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.02);
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      /* -------------------------------- feed ----------------------------- */
+      .feed-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+        margin: 16px 0 8px;
+        padding-top: 12px;
+        border-top: 1px solid var(--line-soft);
+      }
+
+      .feed-head h3 {
+        margin: 0;
+        font-size: 10px;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+        color: var(--dim);
+        font-weight: 650;
+      }
+
+      #feed {
+        display: grid;
+        gap: 8px;
+        max-height: 430px;
+        overflow-y: auto;
+        padding-right: 4px;
+      }
+
+      .decision {
+        border: 1px solid var(--line);
+        border-left: 3px solid var(--dim);
+        border-radius: 10px;
+        background: #0c1219;
+        padding: 9px 11px 8px;
+      }
+
+      .decision.allow {
+        border-left-color: var(--green);
+      }
+
+      .decision.deny {
+        border-left-color: var(--red);
+      }
+
+      .decision.approval {
+        border-left-color: var(--amber);
+      }
+
+      .decision.preview {
+        border-style: dashed;
+        border-left-style: solid;
+        background: rgba(255, 255, 255, 0.012);
+      }
+
+      .d-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .d-amount {
+        font-family: var(--mono);
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .d-dest {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--muted);
+        overflow-wrap: anywhere;
+      }
+
+      .d-time {
+        margin-left: auto;
+        font-size: 10px;
+        color: var(--dim);
+        white-space: nowrap;
+      }
+
+      .d-meta {
+        margin-top: 4px;
+        font-size: 10px;
+        color: var(--dim);
+        font-family: var(--mono);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .d-codes {
+        margin-top: 6px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+
+      details.checks {
+        margin-top: 7px;
+        border-top: 1px solid var(--line-soft);
+        padding-top: 6px;
+      }
+
+      details.checks summary {
+        cursor: pointer;
+        font-size: 10px;
+        color: var(--dim);
+        letter-spacing: 0.04em;
+        list-style: none;
+      }
+
+      details.checks summary::-webkit-details-marker {
+        display: none;
+      }
+
+      details.checks summary::before {
+        content: "▸ ";
+        color: var(--dim);
+      }
+
+      details.checks[open] summary::before {
+        content: "▾ ";
+      }
+
+      details.checks ul {
+        list-style: none;
+        margin: 6px 0 0;
+        padding: 0;
+        display: grid;
+        gap: 5px;
+      }
+
+      details.checks li {
+        display: grid;
+        grid-template-columns: 14px minmax(0, 1fr);
+        gap: 6px;
+        font-size: 10.5px;
+        line-height: 1.35;
+      }
+
+      details.checks .mk {
+        font-family: var(--mono);
+        font-weight: 700;
+      }
+
+      details.checks li.pass .mk {
+        color: var(--green);
+      }
+
+      details.checks li.fail .mk {
+        color: var(--red);
+      }
+
+      details.checks li b {
+        display: block;
+        font-weight: 600;
+        color: var(--text);
+        font-size: 10.5px;
+      }
+
+      details.checks li span {
+        color: var(--muted);
+        overflow-wrap: anywhere;
+      }
+
+      /* ------------------------------ approvals -------------------------- */
+      #approvals {
+        display: grid;
+        gap: 8px;
+      }
+
+      .approval-card {
+        border: 1px solid rgba(255, 176, 32, 0.28);
+        border-radius: 10px;
+        background: rgba(255, 176, 32, 0.05);
+        padding: 9px 10px;
+      }
+
+      .approval-card .a-top {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .approval-card .a-amt {
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .approval-card .a-meta {
+        margin-top: 3px;
+        font-size: 10px;
+        color: var(--dim);
+        font-family: var(--mono);
+      }
+
+      .approval-card .a-btns {
+        margin-top: 8px;
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .approval-card .a-who {
+        font-size: 9.5px;
+        color: var(--dim);
+      }
+
+      .decided {
+        margin-top: 10px;
+        border-top: 1px solid var(--line-soft);
+        padding-top: 8px;
+        display: grid;
+        gap: 4px;
+      }
+
+      .decided-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 10px;
+        color: var(--dim);
+        font-family: var(--mono);
+      }
+
+      /* ------------------------------- budgets --------------------------- */
+      .budget {
+        margin-bottom: 12px;
+      }
+
+      .budget:last-child {
+        margin-bottom: 0;
+      }
+
+      .b-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 11px;
+      }
+
+      .b-asset {
+        font-family: var(--mono);
+        font-weight: 600;
+      }
+
+      .b-nums {
+        font-size: 10.5px;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .track {
+        margin-top: 5px;
+        height: 6px;
+        border-radius: 999px;
+        background: #1a2431;
+        overflow: hidden;
+      }
+
+      .fill {
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #2bb673, var(--green));
+        transition: width 0.3s ease;
+      }
+
+      .fill.warn {
+        background: linear-gradient(90deg, #d99411, var(--amber));
+      }
+
+      .fill.full {
+        background: linear-gradient(90deg, #d63a48, var(--red));
+      }
+
+      .b-sub {
+        margin-top: 4px;
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 9.5px;
+        color: var(--dim);
+        font-family: var(--mono);
+      }
+
+      /* ------------------------------- attacks --------------------------- */
+      .attack-summary {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 10px;
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .attack-scroll {
+        border: 1px solid var(--line-soft);
+        border-radius: 10px;
+        overflow: auto;
+        max-height: 380px;
+      }
+
+      table.attack {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+      }
+
+      table.attack th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        text-align: left;
+        padding: 6px 9px;
+        background: #0e141d;
+        border-bottom: 1px solid var(--line);
+        font-size: 9.5px;
+        font-weight: 600;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+        color: var(--dim);
+        white-space: nowrap;
+      }
+
+      table.attack td {
+        padding: 7px 9px;
+        border-bottom: 1px solid var(--line-soft);
+        vertical-align: top;
+      }
+
+      table.attack tr:last-child td {
+        border-bottom: none;
+      }
+
+      table.attack tr.allow td {
+        background: rgba(61, 220, 132, 0.035);
+      }
+
+      .a-name {
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .a-subject {
+        margin-top: 2px;
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--dim);
+        overflow-wrap: anywhere;
+      }
+
+      .a-wall {
+        color: var(--muted);
+        font-size: 10.5px;
+      }
+
+      .a-codes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 3px;
+      }
+
+      .a-idx {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--dim);
+        width: 22px;
+      }
+
+      /* -------------------------------- audit ---------------------------- */
+      .audit-strip {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        flex-wrap: wrap;
+      }
+
+      .audit-stats {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        flex-wrap: wrap;
+      }
+
+      .a-stat {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .a-stat .k {
+        font-size: 9px;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+        color: var(--dim);
+      }
+
+      .a-stat .v {
+        font-size: 12px;
+        color: var(--text);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .a-stat code {
+        font-size: 11px;
+      }
+
+      .audit-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      /* -------------------------------- toast ---------------------------- */
+      #toast {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        z-index: 60;
+        max-width: 420px;
+        padding: 10px 13px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: #111823;
+        box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+        font-size: 12px;
+        color: var(--text);
+        opacity: 0;
+        transform: translateY(8px);
+        pointer-events: none;
+        transition: opacity 0.16s ease, transform 0.16s ease;
+      }
+
+      #toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      #toast[data-kind="good"] {
+        border-color: rgba(61, 220, 132, 0.4);
+      }
+
+      #toast[data-kind="bad"] {
+        border-color: rgba(255, 95, 109, 0.4);
+      }
+
+      #toast[data-kind="warn"] {
+        border-color: rgba(255, 176, 32, 0.4);
+      }
+
+      footer.page-foot {
+        max-width: 1680px;
+        margin: 0 auto;
+        padding: 0 22px 24px;
+        font-size: 10.5px;
+        color: var(--dim);
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      footer.page-foot code {
+        color: var(--fat, #7c8ea4);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path
+              d="M12 2.6 4.6 5.5v5.9c0 4.6 3.1 8.4 7.4 10 4.3-1.6 7.4-5.4 7.4-10V5.5L12 2.6Z"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linejoin="round"
+            />
+            <path d="M8.7 12.1l2.3 2.3 4.4-4.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+        <div>
+          <h1>Veto</h1>
+          <p class="tagline">the spending firewall for AI agents</p>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="pin">
+          <span class="k">pinned policy hash</span>
+          <code id="policy-hash">loading…</code>
+          <button class="copy" id="copy-hash" type="button" title="Copy the full policy hash">copy</button>
+        </div>
+        <div class="conn">
+          <span class="dot" id="conn-dot" data-state="pending" aria-hidden="true"></span>
+          <span id="conn-text">connecting…</span>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <!-- ------------------------------------------------------ policy -->
+      <section class="panel" id="policy-panel">
+        <div class="panel-head">
+          <h2>Policy</h2>
+          <span class="chip ghost" id="policy-mode">strict</span>
+        </div>
+        <div id="policy-body">
+          <p class="empty">Loading the pinned policy…</p>
+        </div>
+      </section>
+
+      <!-- ---------------------------------------------------- activity -->
+      <section class="panel" id="activity-panel">
+        <div class="panel-head">
+          <h2>Agent activity</h2>
+          <span class="hint">eval → decide → book, or refuse</span>
+        </div>
+
+        <div class="form-grid">
+          <div class="field">
+            <label for="kind">Action kind</label>
+            <select id="kind">
+              <option value="ft.transfer">ft.transfer</option>
+              <option value="near.transfer">near.transfer</option>
+              <option value="intent.swap">intent.swap</option>
+              <option value="api.pay">api.pay</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="asset">Asset</label>
+            <select id="asset">
+              <option value="USDC">USDC</option>
+              <option value="NEAR">NEAR</option>
+              <option value="USDT">USDT</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="amount">Amount</label>
+            <input id="amount" type="text" value="5" spellcheck="false" autocomplete="off" />
+          </div>
+        </div>
+
+        <div class="form-row" id="recipient-row">
+          <div class="field">
+            <label for="recipient">Recipient</label>
+            <input id="recipient" type="text" value="compute.near" spellcheck="false" autocomplete="off" />
+          </div>
+          <span class="hint">agent: <code id="agent-name">argo.near</code></span>
+        </div>
+
+        <div class="form-row hidden" id="swap-row">
+          <div class="field">
+            <label>Swap output destination</label>
+            <div class="swap-dest">
+              <code id="swap-dest">0x9a1f4b0c…</code>
+              <label class="toggle" title="Redirect the swap output to 0xdeadbeef… and watch the policy refuse it">
+                <input type="checkbox" id="tamper" />
+                <span>tamper destination</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" id="send" type="button">Send to policy</button>
+          <button class="btn" id="evaluate" type="button">Evaluate</button>
+          <span class="hint" id="form-hint">Evaluate is a dry run: it never books a spend.</span>
+        </div>
+
+        <div class="presets">
+          <span class="lbl">try</span>
+          <button class="preset" type="button" data-preset="small">5 USDC → compute.near</button>
+          <button class="preset" type="button" data-preset="over">26 USDC (over per-tx)</button>
+          <button class="preset" type="button" data-preset="drainer">→ drainer.near</button>
+          <button class="preset" type="button" data-preset="swap">1 NEAR swap</button>
+        </div>
+
+        <div class="feed-head">
+          <h3>Decision feed</h3>
+          <span class="hint" id="feed-count"></span>
+        </div>
+        <div id="feed"></div>
+      </section>
+
+      <!-- -------------------------------------------- approvals budgets -->
+      <div class="col-right">
+        <section class="panel" id="approvals-panel">
+          <div class="panel-head">
+            <h2>Approvals</h2>
+            <span class="chip neutral" id="approvals-count">queue clear</span>
+          </div>
+          <div id="approvals">
+            <p class="empty">Nothing waiting for a human.</p>
+          </div>
+          <div id="decided"></div>
+        </section>
+
+        <section class="panel" id="budgets-panel">
+          <div class="panel-head">
+            <h2>Spend budgets</h2>
+            <span class="hint">used vs daily limit</span>
+          </div>
+          <div id="budgets">
+            <p class="empty">Waiting for the ledger…</p>
+          </div>
+        </section>
+      </div>
+
+      <!-- ----------------------------------------------------- attacks -->
+      <section class="panel" id="attacks-panel">
+        <div class="panel-head">
+          <h2>Attack simulator</h2>
+          <button class="btn sm" id="run-attack" type="button">Run attack sequence</button>
+        </div>
+        <div id="attack-body">
+          <p class="empty">
+            Thirteen scripted attempts, one throwaway guard. Nothing here can spend the live budget or touch the live audit
+            chain.
+          </p>
+        </div>
+      </section>
+
+      <!-- ------------------------------------------------------- audit -->
+      <section class="panel" id="audit-panel">
+        <div class="audit-strip">
+          <div class="audit-stats">
+            <div class="a-stat">
+              <span class="k">Audit chain</span>
+              <span class="v" id="audit-records">—</span>
+            </div>
+            <div class="a-stat">
+              <span class="k">Head</span>
+              <code id="audit-head">—</code>
+            </div>
+            <div class="a-stat">
+              <span class="k">Verification</span>
+              <span class="v" id="audit-status"><span class="chip neutral">not checked</span></span>
+            </div>
+            <div class="a-stat">
+              <span class="k">Commits to</span>
+              <code id="audit-policy">—</code>
+            </div>
+          </div>
+          <div class="audit-actions">
+            <button class="btn sm" id="verify-chain" type="button">Verify chain</button>
+            <button class="btn sm subtle" id="reset-policy" type="button" title="Reload examples/policy.yaml into a fresh guard">Reset demo state</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="page-foot">
+      <span>Veto · policy firewall for NEAR agent wallets</span>
+      <span>·</span>
+      <span>swap numbers from the recorded 1Click quote (<code id="foot-quote">1 NEAR → 4.914535 USDC</code>)</span>
+      <span>·</span>
+      <span>amounts are exact base units, never floats</span>
+    </footer>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+
+    <script type="module">
+      /* ================================================================== *
+       * Veto dashboard. One panel, one render function, no frameworks.
+       * ================================================================== */
+
+      const $ = (id) => document.getElementById(id);
+
+      const ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+      const esc = (value) => String(value === undefined || value === null ? "" : value).replace(/[&<>"']/g, (char) => ESCAPES[char]);
+
+      const DECIMALS = new Intl.NumberFormat(undefined, { maximumFractionDigits: 6 });
+      const WHOLE = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
+      const USD = new Intl.NumberFormat(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 2 });
+
+      const APPROVER = "alice.near";
+      const ATTACKER_DESTINATION = "0xdeadbeef00000000000000000000000000000000";
+      /** Only used until /api/state arrives: the real pin lives in the policy. */
+      const FALLBACK_DESTINATION = "0x9a1f4b0c2d7e8f6a3b5c1d9e0f2a4b6c8d0e1f3a";
+
+      function pinnedDestination() {
+        const intents = (view.state && view.state.policy && view.state.policy.intents) || {};
+        const list = Array.isArray(intents.allowedDestinations) ? intents.allowedDestinations : [];
+        return list[0] || FALLBACK_DESTINATION;
+      }
+
+      const view = {
+        state: null,
+        feed: [],
+        attack: null,
+        audit: null,
+        busy: false,
+        refreshing: false,
+      };
+
+      /* ------------------------------------------------------------ utils */
+
+      function amountText(value) {
+        const number = Number(value);
+        if (!Number.isFinite(number)) return String(value === undefined || value === null ? "—" : value);
+        return DECIMALS.format(number);
+      }
+
+      function shortHash(hash, length = 12) {
+        if (typeof hash !== "string" || hash.length === 0) return "—";
+        return hash.length <= length ? hash : `${hash.slice(0, length)}…`;
+      }
+
+      function shortId(id) {
+        return typeof id === "string" && id.length > 14 ? `${id.slice(0, 10)}…` : String(id || "—");
+      }
+
+      function clockTime(iso) {
+        const date = new Date(iso);
+        return Number.isNaN(date.getTime()) ? "" : date.toLocaleTimeString(undefined, { hour12: false });
+      }
+
+      function ago(iso) {
+        const stamp = Date.parse(iso);
+        if (!Number.isFinite(stamp)) return "";
+        const seconds = Math.max(0, Math.round((Date.now() - stamp) / 1000));
+        if (seconds < 5) return "just now";
+        if (seconds < 60) return `in ${seconds}s`;
+        const minutes = Math.round(seconds / 60);
+        if (minutes < 60) return `in ${minutes}m`;
+        return `in ${Math.round(minutes / 60)}h`;
+      }
+
+      function since(iso) {
+        const stamp = Date.parse(iso);
+        if (!Number.isFinite(stamp)) return "";
+        const seconds = Math.max(0, Math.round((Date.now() - stamp) / 1000));
+        if (seconds < 5) return "just now";
+        if (seconds < 60) return `${seconds}s ago`;
+        const minutes = Math.round(seconds / 60);
+        if (minutes < 60) return `${minutes}m ago`;
+        return `${Math.round(minutes / 60)}h ago`;
+      }
+
+      function verdictClass(verdict) {
+        if (verdict === "require_approval") return "approval";
+        return verdict === "allow" ? "allow" : "deny";
+      }
+
+      function verdictLabel(verdict) {
+        if (verdict === "allow") return "ALLOW";
+        if (verdict === "require_approval") return "NEEDS APPROVAL";
+        return "DENY";
+      }
+
+      function verdictChip(verdict, extra) {
+        const kind = verdictClass(verdict);
+        return `<span class="chip ${kind}">${esc(verdictLabel(verdict))}${extra ? ` · ${esc(extra)}` : ""}</span>`;
+      }
+
+      let toastTimer = null;
+      function toast(message, kind = "info") {
+        const node = $("toast");
+        node.textContent = message;
+        node.dataset.kind = kind;
+        node.classList.add("show");
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => node.classList.remove("show"), 4600);
+      }
+
+      function setConnection(state, detail) {
+        const dot = $("conn-dot");
+        dot.dataset.state = state;
+        $("conn-text").textContent = state === "live" ? "live · guard attached" : state === "down" ? "offline" : "connecting…";
+        if (detail) dot.title = detail;
+      }
+
+      /* -------------------------------------------------------------- api */
+
+      async function api(path, options = {}) {
+        const init = { method: options.method || "GET", headers: {} };
+        if (options.body !== undefined) {
+          init.method = options.method || "POST";
+          init.headers["content-type"] = "application/json";
+          init.body = JSON.stringify(options.body);
+        }
+        let response;
+        try {
+          response = await fetch(path, init);
+        } catch (error) {
+          throw new Error(`network error: ${error.message}`);
+        }
+        const text = await response.text();
+        let payload = null;
+        if (text.length > 0) {
+          try {
+            payload = JSON.parse(text);
+          } catch {
+            throw new Error(`server returned non-JSON (HTTP ${response.status})`);
+          }
+        }
+        if (!response.ok) {
+          const detail = payload && payload.error ? payload.error : `HTTP ${response.status}`;
+          throw new Error(detail);
+        }
+        return payload;
+      }
+
+      /* ------------------------------------------------------- policy panel */
+
+      function renderPolicy(state) {
+        const policy = state.policy || {};
+        const limits = policy.limits || {};
+        const perTx = limits.perTx || {};
+        const daily = limits.daily || {};
+        const monthly = limits.monthly || {};
+        const assets = [...new Set([...Object.keys(perTx), ...Object.keys(daily), ...Object.keys(monthly)])].sort();
+
+        const limitRows = assets
+          .map(
+            (asset) => `<tr>
+              <td>${esc(asset)}</td>
+              <td>${perTx[asset] !== undefined ? esc(amountText(perTx[asset])) : '<span class="dim">—</span>'}</td>
+              <td>${daily[asset] !== undefined ? esc(amountText(daily[asset])) : '<span class="dim">—</span>'}</td>
+              <td>${monthly[asset] !== undefined ? esc(amountText(monthly[asset])) : '<span class="dim">—</span>'}</td>
+            </tr>`,
+          )
+          .join("");
+
+        const counterparties = policy.counterparties || {};
+        const allow = (counterparties.allow || []).map((account) => `<span class="pill">${esc(account)}</span>`).join("");
+        const deny = (counterparties.deny || []).map((account) => `<span class="pill bad">${esc(account)}</span>`).join("");
+        const approvals = policy.approvals || {};
+        const approvers = (approvals.approvers || []).map((account) => esc(account)).join(", ") || "—";
+        const velocity = policy.velocity || {};
+        const intents = policy.intents || {};
+        const thresholdUsd = approvals.thresholdUsd;
+        const actions = policy.actions || {};
+
+        $("policy-mode").textContent = counterparties.mode === "open" ? "open mode" : "strict counterparties";
+        $("policy-body").innerHTML = `
+          <div class="policy-name">${esc(policy.name || "unnamed policy")}</div>
+          <div class="id-row"><span class="k">owner</span><span class="v">${esc(policy.owner || "—")}</span></div>
+          <div class="id-row"><span class="k">agent</span><span class="v">${esc(policy.agent || "—")}</span></div>
+
+          <div class="subhead">Limits</div>
+          <table class="limits">
+            <thead>
+              <tr><th>asset</th><th>per tx</th><th>daily</th><th>monthly</th></tr>
+            </thead>
+            <tbody>${limitRows || '<tr><td colspan="4" class="dim">no limits configured</td></tr>'}</tbody>
+          </table>
+          ${limits.defaultPerTxUsd !== undefined ? `<div class="id-row"><span class="k">default per tx</span><span class="v">$${esc(amountText(limits.defaultPerTxUsd))}</span></div>` : ""}
+
+          <div class="subhead">Allow list</div>
+          <div>${allow || '<span class="dim">anyone (open mode)</span>'}</div>
+
+          <div class="subhead">Deny list</div>
+          <div>${deny || '<span class="dim">nobody</span>'}</div>
+
+          <div class="subhead">Human approval</div>
+          <div class="id-row"><span class="k">above</span><span class="v">${thresholdUsd !== undefined ? `$${esc(amountText(thresholdUsd))}` : "never"}</span></div>
+          <div class="id-row"><span class="k">approvers</span><span class="v">${approvers}</span></div>
+          <div class="id-row"><span class="k">request ttl</span><span class="v">${approvals.ttlSeconds !== undefined ? `${WHOLE.format(approvals.ttlSeconds)}s` : "—"}</span></div>
+
+          <div class="subhead">Velocity &amp; intents</div>
+          <div class="id-row"><span class="k">max tx / hour</span><span class="v">${velocity.maxTxPerHour !== undefined ? WHOLE.format(velocity.maxTxPerHour) : "—"}</span></div>
+          <div class="id-row"><span class="k">min gap</span><span class="v">${velocity.minIntervalSeconds !== undefined ? `${WHOLE.format(velocity.minIntervalSeconds)}s` : "—"}</span></div>
+          <div class="id-row"><span class="k">swap venue</span><span class="v">${esc((intents.venues || []).join(", ") || "—")}</span></div>
+          <div class="id-row"><span class="k">max slippage</span><span class="v">${intents.maxSlippageBps !== undefined ? `${WHOLE.format(intents.maxSlippageBps)} bps` : "—"}</span></div>
+          <div class="id-row"><span class="k">swap destination</span><span class="v" title="${esc((intents.allowedDestinations || []).join(", "))}">${esc(shortHash((intents.allowedDestinations || [])[0] || "—", 10))}</span></div>
+          <div class="id-row"><span class="k">allowed kinds</span><span class="v">${WHOLE.format((actions.allow || []).length)}</span></div>
+
+          <p class="note">
+            The policy hash is what the audit chain commits to: every record stores <code>${esc(shortHash(state.policyHash, 10))}</code>,
+            so editing a limit after the fact breaks verification instead of quietly widening the walls.
+          </p>
+        `;
+      }
+
+      /* ----------------------------------------------------- decision feed */
+
+      function describeRecipient(decision) {
+        if (decision.kind === "intent.swap") {
+          const destination = decision.destinationAddress;
+          return destination ? `→ ${shortHash(destination, 14)}` : "→ no destination";
+        }
+        return decision.to ? `→ ${decision.to}` : "→ no recipient";
+      }
+
+      function renderCheck(check) {
+        return `<li class="${check.passed ? "pass" : "fail"}">
+          <span class="mk">${check.passed ? "✓" : "✗"}</span>
+          <span class="ct"><b>${esc(check.title)}</b><span>${esc(check.detail)}</span></span>
+        </li>`;
+      }
+
+      function renderDecision(entry) {
+        const decision = entry.decision || {};
+        const kind = verdictClass(decision.verdict);
+        const codes = (decision.reasons || [])
+          .map((reason) => `<span class="code" title="${esc(reason.message)}">${esc(reason.code)}</span>`)
+          .join("");
+        const checks = decision.checks || [];
+        const failed = checks.filter((check) => !check.passed).length;
+        const risk = decision.risk || { level: "low", score: 0 };
+        const usd = decision.amountUsdCents ? `≈ ${USD.format(Number(decision.amountUsdCents) / 100)}` : null;
+
+        return `<article class="decision ${kind} ${entry.preview ? "preview" : ""}">
+          <div class="d-head">
+            ${verdictChip(decision.verdict)}
+            ${entry.preview ? '<span class="chip ghost">dry run</span>' : ""}
+            <span class="d-amount">${esc(amountText(decision.amount))} ${esc(decision.asset)}</span>
+            <span class="d-dest">${esc(describeRecipient(decision))}</span>
+            <span class="d-time">${esc(clockTime(decision.evaluatedAt))}</span>
+          </div>
+          <div class="d-meta">
+            <span>${esc(decision.kind)}</span>
+            <span>${esc(shortId(decision.decisionId))}</span>
+            <span>risk ${WHOLE.format(risk.score)} ${esc(risk.level)}</span>
+            ${usd ? `<span>${esc(usd)}</span>` : ""}
+          </div>
+          ${codes ? `<div class="d-codes">${codes}</div>` : ""}
+          ${
+            checks.length
+              ? `<details class="checks"><summary>${WHOLE.format(checks.length)} checks · ${WHOLE.format(failed)} failed</summary><ul>${checks
+                  .map(renderCheck)
+                  .join("")}</ul></details>`
+              : ""
+          }
+        </article>`;
+      }
+
+      function renderFeed() {
+        const feed = $("feed");
+        $("feed-count").textContent = view.feed.length ? `${WHOLE.format(view.feed.length)} decisions` : "";
+        if (view.feed.length === 0) {
+          feed.innerHTML = `<p class="empty">No decisions yet. Send an action above, or run the attack simulator.</p>`;
+          return;
+        }
+        feed.innerHTML = view.feed.map(renderDecision).join("");
+      }
+
+      function mergeRecent(list) {
+        const incoming = Array.isArray(list) ? list : [];
+        const known = new Set(view.feed.map((entry) => entry.decision && entry.decision.decisionId));
+        const fresh = incoming.filter((decision) => decision && !known.has(decision.decisionId));
+        if (fresh.length === 0) return false;
+        view.feed = [...fresh.map((decision) => ({ decision, preview: false })), ...view.feed].slice(0, 40);
+        return true;
+      }
+
+      function addDecision(decision, preview) {
+        if (!decision || !decision.decisionId) return;
+        if (view.feed.some((entry) => entry.decision && entry.decision.decisionId === decision.decisionId)) return;
+        view.feed = [{ decision, preview: Boolean(preview) }, ...view.feed].slice(0, 40);
+      }
+
+      /* -------------------------------------------------------- approvals */
+
+      function renderApprovals(state) {
+        const pending = Array.isArray(state.approvals) ? state.approvals : [];
+        const decided = Array.isArray(state.approvalsDecided) ? state.approvalsDecided : [];
+        const threshold = state.policy && state.policy.approvals ? state.policy.approvals.thresholdUsd : undefined;
+
+        $("approvals-count").textContent = pending.length ? `${WHOLE.format(pending.length)} waiting` : "queue clear";
+        $("approvals-count").className = pending.length ? "chip approval" : "chip neutral";
+
+        const host = $("approvals");
+        if (pending.length === 0) {
+          host.innerHTML = `<p class="empty">Nothing waiting for a human. Requests above ${
+            threshold !== undefined ? `$${esc(amountText(threshold))}` : "the threshold"
+          } land here and hold their budget until a person decides.</p>`;
+        } else {
+          host.innerHTML = pending
+            .map((approval) => {
+              const amount = `${esc(amountText(approval.amount))} ${esc(approval.asset)}`;
+              const destination = approval.to ? `→ ${esc(approval.to)}` : "no recipient";
+              return `<div class="approval-card">
+                <div class="a-top">
+                  <span class="a-amt">${amount}</span>
+                  <span class="d-dest">${destination}</span>
+                  ${verdictChip("require_approval")}
+                </div>
+                <div class="a-meta">${esc(approval.kind)} · ${esc(shortId(approval.id))} · expires ${esc(ago(approval.expiresAt))}</div>
+                <div class="a-btns">
+                  <button class="btn good sm" type="button" data-approval="${esc(approval.id)}" data-verb="approve">Approve</button>
+                  <button class="btn danger sm" type="button" data-approval="${esc(approval.id)}" data-verb="reject">Reject</button>
+                  <span class="a-who">as ${esc(APPROVER)}</span>
+                </div>
+              </div>`;
+            })
+            .join("");
+        }
+
+        const history = $("decided");
+        if (decided.length === 0) {
+          history.innerHTML = "";
+        } else {
+          history.innerHTML = `<div class="decided">${decided
+            .slice(0, 5)
+            .map(
+              (approval) => `<div class="decided-row">
+                <span>${esc(amountText(approval.amount))} ${esc(approval.asset)} · ${esc(approval.status)}</span>
+                <span>${esc(approval.decidedBy || "—")} · ${esc(since(approval.decidedAt))}</span>
+              </div>`,
+            )
+            .join("")}</div>`;
+        }
+      }
+
+      /* ---------------------------------------------------------- budgets */
+
+      function renderBudgets(state) {
+        const rows = Array.isArray(state.summary) ? state.summary : [];
+        const host = $("budgets");
+        if (rows.length === 0) {
+          host.innerHTML = `<p class="empty">No spend limits in this policy.</p>`;
+          return;
+        }
+        host.innerHTML = rows
+          .map((row) => {
+            const daily = row.daily;
+            if (!daily) {
+              return `<div class="budget">
+                <div class="b-head"><span class="b-asset">${esc(row.asset)}</span><span class="b-nums">per tx ${esc(amountText(row.perTx || "—"))}</span></div>
+                <div class="b-sub"><span>no daily budget</span><span>monthly ${row.monthly ? `${esc(amountText(row.monthly.spent))} / ${esc(amountText(row.monthly.limit))}` : "—"}</span></div>
+              </div>`;
+            }
+            const spent = Number(daily.spent) + Number(daily.reserved);
+            const limit = Number(daily.limit);
+            const used = limit > 0 ? Math.min(100, Math.max(0, (spent / limit) * 100)) : 0;
+            const tone = used >= 100 ? "full" : used >= 75 ? "warn" : "";
+            return `<div class="budget">
+              <div class="b-head">
+                <span class="b-asset">${esc(row.asset)}</span>
+                <span class="b-nums">${esc(amountText(daily.spent))}${Number(daily.reserved) > 0 ? ` + ${esc(amountText(daily.reserved))} held` : ""} / ${esc(amountText(daily.limit))}</span>
+              </div>
+              <div class="track"><div class="fill ${tone}" style="width:${used.toFixed(1)}%"></div></div>
+              <div class="b-sub">
+                <span>remaining ${esc(amountText(daily.remaining))}</span>
+                <span>monthly ${row.monthly ? `${esc(amountText(row.monthly.spent))} / ${esc(amountText(row.monthly.limit))}` : "—"} · per tx ${esc(amountText(row.perTx || "—"))}</span>
+              </div>
+            </div>`;
+          })
+          .join("");
+      }
+
+      /* --------------------------------------------------------- attacks */
+
+      function renderAttack(run) {
+        view.attack = run;
+        const results = Array.isArray(run.results) ? run.results : [];
+        const host = $("attack-body");
+        if (results.length === 0) {
+          host.innerHTML = `<p class="empty">The simulator returned no cases.</p>`;
+          return;
+        }
+        const rows = results
+          .map((entry, index) => {
+            const kind = verdictClass(entry.verdict);
+            const codes = (entry.codes || []).map((code) => `<span class="code">${esc(code)}</span>`).join("");
+            const mismatch = entry.matchesExpectation === false ? ' <span class="chip deny">unexpected</span>' : "";
+            return `<tr class="${kind}">
+              <td class="a-idx">${String(index + 1).padStart(2, "0")}</td>
+              <td>
+                <div class="a-name">${esc(entry.name)}${mismatch}</div>
+                <div class="a-subject">${esc(entry.subject)}</div>
+              </td>
+              <td>${verdictChip(entry.verdict)}</td>
+              <td><div class="a-wall">${esc(entry.wall)}</div></td>
+              <td><div class="a-codes">${codes || '<span class="code ok">clean</span>'}</div></td>
+            </tr>`;
+          })
+          .join("");
+
+        host.innerHTML = `
+          <div class="attack-summary">
+            ${verdictChip("deny")}
+            <span><b>${WHOLE.format(run.denied)}</b> of ${WHOLE.format(run.count)} refused</span>
+            <span class="dim">·</span>
+            ${verdictChip("allow")}
+            <span><b>${WHOLE.format(run.allowed)}</b> legitimate payment let through</span>
+            <span class="dim">·</span>
+            <span class="hint">${run.mismatches === 0 ? "every case landed where the catalogue says it should" : `${WHOLE.format(run.mismatches)} case(s) did not match expectations`}</span>
+          </div>
+          <div class="attack-scroll">
+            <table class="attack">
+              <thead>
+                <tr><th>#</th><th>Attack</th><th>Verdict</th><th>Wall it hit</th><th>Reason codes</th></tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+          <p class="note">${esc(run.policyNote || "")}</p>
+        `;
+      }
+
+      async function runAttack() {
+        const button = $("run-attack");
+        button.disabled = true;
+        button.textContent = "Running…";
+        try {
+          const run = await api("/api/simulate-attack", { method: "POST" });
+          renderAttack(run);
+          toast(`${WHOLE.format(run.denied)} of ${WHOLE.format(run.count)} attacks refused, ${WHOLE.format(run.allowed)} legitimate payment allowed`, "good");
+        } catch (error) {
+          toast(`attack simulator failed: ${error.message}`, "bad");
+        } finally {
+          button.disabled = false;
+          button.textContent = "Run attack sequence";
+        }
+      }
+
+      /* ----------------------------------------------------------- audit */
+
+      function renderAudit(verification, hash) {
+        $("audit-records").textContent = verification ? `${WHOLE.format(verification.records)} records` : "—";
+        const head = $("audit-head");
+        head.textContent = verification ? shortHash(verification.head, 16) : "—";
+        head.title = verification ? verification.head : "";
+        $("audit-policy").textContent = shortHash(hash, 12);
+        const status = $("audit-status");
+        if (!verification) {
+          status.innerHTML = '<span class="chip neutral">not checked</span>';
+          return;
+        }
+        status.innerHTML = verification.ok
+          ? '<span class="chip allow">verified</span>'
+          : `<span class="chip deny">broken at #${WHOLE.format(verification.brokenAt || 0)}</span>`;
+      }
+
+      async function verifyChain() {
+        const button = $("verify-chain");
+        button.disabled = true;
+        try {
+          const audit = await api("/api/audit");
+          view.audit = audit;
+          renderAudit(audit.verification, audit.policyHash);
+          if (audit.verification.ok) {
+            toast(`chain verified: ${WHOLE.format(audit.count)} records, head ${shortHash(audit.verification.head, 12)}`, "good");
+          } else {
+            toast(`chain broken at record #${audit.verification.brokenAt}: ${audit.verification.reason || "hash mismatch"}`, "bad");
+          }
+        } catch (error) {
+          toast(`verify failed: ${error.message}`, "bad");
+        } finally {
+          button.disabled = false;
+        }
+      }
+
+      async function resetDemo() {
+        const button = $("reset-policy");
+        button.disabled = true;
+        try {
+          const result = await api("/api/policy/reset", { method: "POST" });
+          view.feed = [];
+          view.attack = null;
+          renderFeed();
+          $("attack-body").innerHTML = `<p class="empty">Fresh guard. Run the attack sequence to fill this panel again.</p>`;
+          toast(`policy reloaded: ${shortHash(result.policyHash, 12)} · ledger, approvals and audit chain cleared`, "good");
+          await refreshState();
+        } catch (error) {
+          toast(`reset failed: ${error.message}`, "bad");
+        } finally {
+          button.disabled = false;
+        }
+      }
+
+      /* ------------------------------------------------------------ form */
+
+      function currentQuote() {
+        const quote = (view.state && view.state.intentsQuote) || {};
+        return {
+          venue: "near-intents",
+          originAsset: $("asset").value,
+          destinationAsset: quote.destinationAsset || "nep141:arb-0xaf88d065e77c8cc2239327c5edb3a432268e5831.omft.near",
+          amountIn: quote.amountIn || "1000000000000000000000000",
+          amountOut: quote.amountOut || "4914535",
+          minAmountOut: quote.minAmountOut || "4889962",
+          slippageBps: 50,
+          destinationAddress: $("tamper").checked ? ATTACKER_DESTINATION : PINNED_DESTINATION,
+          expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+        };
+      }
+
+      function buildAction(preview) {
+        const kind = $("kind").value;
+        const asset = $("asset").value;
+        const amount = $("amount").value.trim();
+        const recipient = $("recipient").value.trim();
+        const actor = (view.state && view.state.policy && view.state.policy.agent) || "argo.near";
+
+        if (amount.length === 0) {
+          toast("amount is required", "bad");
+          return null;
+        }
+
+        const action = {
+          id: `${preview ? "ui_preview" : "ui"}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+          kind,
+          actor,
+          asset,
+          amount,
+          requestedAt: new Date().toISOString(),
+          reason: "submitted from the Veto dashboard",
+        };
+
+        if (kind === "intent.swap") {
+          action.venue = "near-intents";
+          action.slippageBps = 50;
+          action.destinationAddress = $("tamper").checked ? ATTACKER_DESTINATION : PINNED_DESTINATION;
+          action.quote = currentQuote();
+        } else if (recipient.length > 0) {
+          action.to = recipient;
+        }
+        return action;
+      }
+
+      function setBusy(busy) {
+        view.busy = busy;
+        $("send").disabled = busy;
+        $("evaluate").disabled = busy;
+        $("send").textContent = busy ? "Sending…" : "Send to policy";
+      }
+
+      async function submitAction(preview) {
+        if (view.busy) return;
+        const action = buildAction(preview);
+        if (!action) return;
+        setBusy(true);
+        try {
+          const endpoint = preview ? "/api/preview" : "/api/actions";
+          const result = await api(endpoint, { method: "POST", body: action });
+          if (result && result.decision) {
+            addDecision(result.decision, preview);
+            renderFeed();
+            const decision = result.decision;
+            if (result.approval) {
+              toast(`queued for approval: ${shortId(result.approval.id)} — a human has to co-sign`, "warn");
+            } else if (preview) {
+              toast(`dry run: ${verdictLabel(decision.verdict)} · nothing booked`, "info");
+            } else if (decision.verdict === "deny") {
+              toast(`denied: ${(decision.reasons || []).map((reason) => reason.code).join(", ") || "policy refusal"}`, "bad");
+            } else {
+              toast(`allowed and booked: ${amountText(decision.amount)} ${decision.asset}`, "good");
+            }
+          }
+          await refreshState();
+        } catch (error) {
+          toast(error.message, "bad");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      function applyPreset(name) {
+        const presets = {
+          small: { kind: "ft.transfer", asset: "USDC", amount: "5", recipient: "compute.near", tamper: false },
+          over: { kind: "ft.transfer", asset: "USDC", amount: "26", recipient: "compute.near", tamper: false },
+          drainer: { kind: "ft.transfer", asset: "USDC", amount: "5", recipient: "drainer.near", tamper: false },
+          swap: { kind: "intent.swap", asset: "NEAR", amount: "1", recipient: "compute.near", tamper: false },
+        };
+        const preset = presets[name];
+        if (!preset) return;
+        $("kind").value = preset.kind;
+        $("asset").value = preset.asset;
+        $("amount").value = preset.amount;
+        $("recipient").value = preset.recipient;
+        $("tamper").checked = preset.tamper;
+        updateFormForKind();
+      }
+
+      function updateFormForKind() {
+        const isSwap = $("kind").value === "intent.swap";
+        $("recipient-row").classList.toggle("hidden", isSwap);
+        $("swap-row").classList.toggle("hidden", !isSwap);
+        $("form-hint").textContent = isSwap
+          ? "Swaps are checked against the 1Click quote, the venue, slippage and the pinned destination."
+          : "Evaluate is a dry run: it never books a spend.";
+        $("swap-dest").textContent = $("tamper").checked ? `${shortHash(ATTACKER_DESTINATION, 14)} (tampered)` : `${shortHash(PINNED_DESTINATION, 14)} (pinned)`;
+      }
+
+      /* -------------------------------------------------------- approvals */
+
+      async function decideApproval(id, verb) {
+        const buttons = document.querySelectorAll(`button[data-approval="${id}"]`);
+        buttons.forEach((button) => (button.disabled = true));
+        try {
+          const result = await api(`/api/approvals/${encodeURIComponent(id)}/${verb}`, {
+            method: "POST",
+            body: verb === "approve" ? { approver: APPROVER } : { approver: APPROVER, note: "rejected from the dashboard" },
+          });
+          const status = (result && result.status) || "unknown";
+          if (status === "executed") toast(`approved by ${APPROVER}: re-checked against the policy and executed`, "good");
+          else if (status === "rejected") toast("rejected — the reservation is released and the budget is free again", "warn");
+          else if (status === "recheck_failed") toast("approval re-check failed: the policy tightened since this request", "bad");
+          else if (status === "expired") toast("that approval already expired", "warn");
+          else toast(`approval ${status}`, status === "executed" ? "good" : "warn");
+          await refreshState();
+        } catch (error) {
+          toast(error.message, "bad");
+          buttons.forEach((button) => (button.disabled = false));
+        }
+      }
+
+      /* ------------------------------------------------------- state load */
+
+      function renderAll() {
+        const state = view.state;
+        if (!state) return;
+        $("policy-hash").textContent = shortHash(state.policyHash, 12);
+        $("policy-hash").title = state.policyHash;
+        $("agent-name").textContent = (state.policy && state.policy.agent) || "argo.near";
+        if (state.intentsQuote && state.intentsQuote.amountOutFormatted) {
+          $("foot-quote").textContent = `1 NEAR → ${amountText(state.intentsQuote.amountOutFormatted)} USDC`;
+        }
+        renderPolicy(state);
+        renderApprovals(state);
+        renderBudgets(state);
+        renderAudit(state.audit, state.policyHash);
+      }
+
+      async function refreshState() {
+        if (view.refreshing) return;
+        view.refreshing = true;
+        try {
+          const state = await api("/api/state");
+          view.state = state;
+          mergeRecent(state.recent);
+          renderAll();
+          renderFeed();
+          setConnection("live");
+        } catch (error) {
+          setConnection("down", error.message);
+        } finally {
+          view.refreshing = false;
+        }
+      }
+
+      /* -------------------------------------------------------------- init */
+
+      function bind() {
+        $("kind").addEventListener("change", updateFormForKind);
+        $("tamper").addEventListener("change", updateFormForKind);
+        $("send").addEventListener("click", () => submitAction(false));
+        $("evaluate").addEventListener("click", () => submitAction(true));
+        $("run-attack").addEventListener("click", runAttack);
+        $("verify-chain").addEventListener("click", verifyChain);
+        $("reset-policy").addEventListener("click", resetDemo);
+
+        $("copy-hash").addEventListener("click", async () => {
+          const hash = (view.state && view.state.policyHash) || "";
+          if (!hash) return;
+          try {
+            await navigator.clipboard.writeText(hash);
+            toast("policy hash copied", "good");
+          } catch {
+            toast("copy failed — the full hash is in the tooltip", "warn");
+          }
+        });
+
+        document.querySelectorAll(".preset").forEach((button) => {
+          button.addEventListener("click", () => applyPreset(button.dataset.preset));
+        });
+
+        $("approvals").addEventListener("click", (event) => {
+          const button = event.target.closest("button[data-approval]");
+          if (!button) return;
+          decideApproval(button.dataset.approval, button.dataset.verb);
+        });
+
+        $("amount").addEventListener("keydown", (event) => {
+          if (event.key === "Enter") submitAction(false);
+        });
+        $("recipient").addEventListener("keydown", (event) => {
+          if (event.key === "Enter") submitAction(false);
+        });
+      }
+
+      function init() {
+        bind();
+        updateFormForKind();
+        renderFeed();
+        refreshState();
+        setInterval(refreshState, 4000);
+        window.addEventListener("focus", refreshState);
+      }
+
+      init();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "name": "veto",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Veto - a policy firewall for AI agent wallets on NEAR. Agents can spend; they just cannot spend everything.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.6"
+  },
+  "scripts": {
+    "test": "node --test-isolation=none --test \"test/unit/*.test.ts\"",
+    "test:all": "node --test-isolation=none --test \"test/**/*.test.ts\"",
+    "demo": "node src/cli/veto.ts demo",
+    "attack": "node src/cli/veto.ts attack",
+    "quote": "node src/cli/veto.ts quote",
+    "quote:capture": "node src/cli/capture.ts",
+    "serve": "node src/app/server.ts",
+    "audit": "node src/cli/veto.ts audit verify"
+  }
+}
