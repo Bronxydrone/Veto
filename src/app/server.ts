@@ -23,12 +23,13 @@ import { extname, join, resolve, sep } from 'node:path';
 import { VetoGuard } from '../core/service.ts';
 import type { ActionRequest, Decision, QuoteSnapshot } from '../core/engine.ts';
 import type { ApprovalRequest } from '../core/service.ts';
-import { loadIntentsQuote, runAttackScript, type IntentsQuote } from './attack-script.ts';
+import { CATALOGUE, runCatalogue } from '../demo/scenarios.ts';
 
 const APP_DIR = import.meta.dirname;
 const ROOT_DIR = resolve(APP_DIR, '..', '..');
 const UI_DIR = join(APP_DIR, 'ui');
 const POLICY_PATH = join(ROOT_DIR, 'examples', 'policy.yaml');
+const QUOTE_PATH = join(ROOT_DIR, 'data', 'fixtures', 'quote.json');
 const PORT = Number(process.env.PORT ?? 8787);
 const HOST = process.env.HOST ?? '127.0.0.1';
 const RECENT_LIMIT = 25;
@@ -49,7 +50,6 @@ class HttpError extends Error {
 // ---------------------------------------------------------------------------
 
 const shippedPolicyText = readFileSync(POLICY_PATH, 'utf8');
-const intentsQuote: IntentsQuote = loadIntentsQuote();
 
 let guard = VetoGuard.create({ policyText: shippedPolicyText });
 
@@ -79,6 +79,139 @@ function resetGuard(reason: string): void {
   guard = VetoGuard.create({ policyText: shippedPolicyText });
   recent = [];
   console.log(`[veto] guard reset (${reason}) -> policy ${guard.policyHash.slice(0, 12)}`);
+}
+
+// ---------------------------------------------------------------------------
+// The recorded 1Click quote, for the swap form and the footer.
+// ---------------------------------------------------------------------------
+
+interface IntentsQuote {
+  source: string;
+  capturedAt: string | null;
+  destinationAsset: string;
+  amountIn: string;
+  amountOut: string;
+  amountOutFormatted: string;
+  minAmountOut: string;
+  amountOutUsd: string | null;
+  slippageToleranceBps: number;
+}
+
+const FALLBACK_QUOTE: IntentsQuote = {
+  source: 'built-in fallback (data/fixtures/quote.json is missing or unreadable)',
+  capturedAt: null,
+  destinationAsset: 'nep141:arb-0xaf88d065e77c8cc2239327c5edb3a432268e5831.omft.near',
+  amountIn: '1000000000000000000000000',
+  amountOut: '4914535',
+  amountOutFormatted: '4.914535',
+  minAmountOut: '4889962',
+  amountOutUsd: '4.913896110450',
+  slippageToleranceBps: 50,
+};
+
+/**
+ * Read the quote fixture on demand: a re-captured quote shows up without a
+ * restart, and a missing file still leaves the page usable.
+ */
+function loadIntentsQuote(): IntentsQuote {
+  try {
+    const raw = JSON.parse(readFileSync(QUOTE_PATH, 'utf8')) as {
+      capturedAt?: string;
+      source?: string;
+      request?: { destinationAsset?: string; slippageTolerance?: number };
+      response?: {
+        quote?: { amountIn?: string; amountOut?: string; amountOutFormatted?: string; minAmountOut?: string; amountOutUsd?: string };
+        quoteRequest?: { slippageTolerance?: number };
+      };
+    };
+    const quote = raw.response?.quote ?? {};
+    if (!quote.amountIn || !quote.amountOut || !quote.amountOutFormatted) return FALLBACK_QUOTE;
+    return {
+      source: raw.source ?? '1Click quote fixture',
+      capturedAt: raw.capturedAt ?? null,
+      destinationAsset: raw.request?.destinationAsset ?? FALLBACK_QUOTE.destinationAsset,
+      amountIn: quote.amountIn,
+      amountOut: quote.amountOut,
+      amountOutFormatted: quote.amountOutFormatted,
+      minAmountOut: quote.minAmountOut ?? FALLBACK_QUOTE.minAmountOut,
+      amountOutUsd: quote.amountOutUsd ?? null,
+      slippageToleranceBps: raw.request?.slippageTolerance ?? raw.response?.quoteRequest?.slippageTolerance ?? 50,
+    };
+  } catch {
+    return FALLBACK_QUOTE;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Attack simulator: one row per scenario in the shared catalogue.
+// ---------------------------------------------------------------------------
+
+interface AttackResult {
+  name: string;
+  /** What the agent asked for, derived from the scenario's action. */
+  subject: string;
+  expect: string;
+  verdict: string;
+  codes: string[];
+  wall: string;
+  detail: string;
+  engine: string;
+  matchesExpectation: boolean;
+}
+
+/** One-line description of the action a scenario attempts, for the table. */
+function describeScenario(action: Partial<ActionRequest> | undefined): string {
+  if (!action) return '';
+  const parts: string[] = [];
+  if (typeof action.kind === 'string') parts.push(action.kind);
+  if (typeof action.amount === 'string' && typeof action.asset === 'string') {
+    parts.push(`${action.amount} ${action.asset}`);
+  }
+  if (typeof action.to === 'string' && action.to.length > 0) parts.push(`-> ${action.to}`);
+  else if (action.quote && typeof action.quote.destinationAddress === 'string') {
+    parts.push(`-> ${action.quote.destinationAddress}`);
+  }
+  if (typeof action.venue === 'string') parts.push(`via ${action.venue}`);
+  if (action.quote && typeof action.quote.slippageBps === 'number') parts.push(`${action.quote.slippageBps} bps`);
+  return parts.join(' · ');
+}
+
+/**
+ * Run the shared catalogue (`src/demo/scenarios.ts`) and shape it for the UI.
+ * Each scenario gets its own throwaway guard, so this can never touch the live
+ * ledger, approvals or audit chain.
+ */
+async function simulateAttacks(): Promise<{
+  ranAt: string;
+  count: number;
+  denied: number;
+  allowed: number;
+  mismatches: number;
+  results: AttackResult[];
+}> {
+  const run = await runCatalogue();
+  const results: AttackResult[] = run.map((result, index) => {
+    const engine = result.detail.split(' | ')[0] ?? '';
+    return {
+      name: result.name,
+      subject: describeScenario(CATALOGUE[index]?.action),
+      expect: result.expect,
+      verdict: result.verdict,
+      codes: result.codes,
+      wall: result.wall,
+      detail: result.detail,
+      engine,
+      matchesExpectation: result.passed,
+    };
+  });
+  return {
+    ranAt: new Date().toISOString(),
+    count: results.length,
+    denied: results.filter((result) => result.verdict === 'deny').length,
+    allowed: results.filter((result) => result.verdict === 'allow').length,
+    mismatches: results.filter((result) => !result.matchesExpectation).length,
+    results,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -290,7 +423,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, pathname: st
       approvalsDecided: decided.slice(-8).reverse().map(approvalSummary),
       audit: guard.verifyAudit(),
       recent,
-      intentsQuote,
+      intentsQuote: loadIntentsQuote(),
     });
     return;
   }
@@ -339,9 +472,9 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, pathname: st
 
   if (pathname === '/api/simulate-attack') {
     if (method !== 'POST') throw new HttpError(400, `POST is required on /api/simulate-attack (received ${method})`);
-    const run = await runAttackScript({ policyText: shippedPolicyText, quote: intentsQuote });
+    const run = await simulateAttacks();
     console.log(
-      `[veto] attack simulator: ${run.count} cases, ${run.denied} denied, ${run.allowed} allowed, ${run.mismatches} mismatches`,
+      `[veto] attack simulator: ${run.count} scenarios, ${run.denied} denied, ${run.allowed} allowed, ${run.mismatches} mismatches`,
     );
     sendJson(res, 200, run);
     return;

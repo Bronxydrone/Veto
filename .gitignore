@@ -7,5 +7,8 @@ contract/target/
 .env
 .env.*
 !.env.example
+# Testnet account keys and run output: never commit private keys.
+data/*.json
+!data/fixtures/**
 # contains personal data (name, email, links) - never commit it
 submission.json

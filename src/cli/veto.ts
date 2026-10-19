@@ -250,10 +250,12 @@ async function commandQuote(destination = PINNED_DESTINATION): Promise<number> {
     amount,
     quote: {
       venue: 'near-intents',
-      originAsset: ONE_CLICK_ASSETS.NEAR,
+      originAsset: 'NEAR',
+      originAssetId: ONE_CLICK_ASSETS.NEAR,
       destinationAsset: ONE_CLICK_ASSETS.USDC_ARB,
       destinationAddress: destination,
       amountOut: quote.amountOut,
+      minAmountOut: quote.minAmountOut,
       slippageBps: 50,
       expiresAt: new Date(clock.t + 300_000).toISOString(),
     },
@@ -274,6 +276,13 @@ async function commandEvaluate(file: string): Promise<number> {
   const action = JSON.parse(readFileSync(file, 'utf8')) as ActionRequest;
   const decision = guard.preview(action);
   console.log(JSON.stringify(decision, null, 2));
+  // The JSON is the machine-readable output; the summary goes to stderr so a pipe
+  // still receives clean JSON.
+  console.error(
+    `\n${verdictChip(decision.verdict)} ${decision.amount} ${decision.asset} ${action.kind} ${
+      decision.reasons.length === 0 ? '' : '[' + decision.reasons.map((r) => r.code).join(', ') + ']'
+    }`,
+  );
   return decision.verdict === 'deny' ? 1 : 0;
 }
 

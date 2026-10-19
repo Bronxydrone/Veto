@@ -13,6 +13,9 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 near-sdk = "5.29.0"
+# Needed as a direct dependency so the `BorshSerialize`/`BorshDeserialize` derives
+# can resolve the crate path (near-sdk re-exports the same borsh 1.x).
+borsh = { version = "1.0", features = ["derive"] }
 
 [dev-dependencies]
 near-sdk = { version = "5.29.0", features = ["unit-testing"] }

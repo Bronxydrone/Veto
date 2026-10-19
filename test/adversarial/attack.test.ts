@@ -228,8 +228,27 @@ test('an audit record is written for denials too, not only for spends', async ()
   assert.equal(guard.verifyAudit().ok, true);
 });
 
-test('the guard survives a save/load round trip', async () => {
-  const dir = join(import.meta.dirname, '..', '..', 'data', 'tmp-state');
+test('a failing executor is recorded as a denial, not as an allow', async () => {
+  const clock = { t: START };
+  const guard = VetoGuard.create({
+    policyText: LAB,
+    clock: () => clock.t,
+    prices: PRICES,
+    executor: () => {
+      throw new Error('relayer refused the transaction');
+    },
+  });
+  const { decision, execution } = await guard.submit(base('exec_1'));
+  assert.equal(decision.verdict, 'deny');
+  assert.equal(execution?.status, 'failed');
+  const state = guard.snapshot();
+  assert.equal(state.audit.length, 1);
+  assert.equal(state.audit[0].verdict, 'deny');
+  assert.ok(state.audit[0].reasons.includes('EXECUTION_FAILED'));
+  assert.equal(state.ledger.length, 0, 'a failed execution must not book a spend');
+});
+
+test('the guard survives a save/load round trip', async () => {  const dir = join(import.meta.dirname, '..', '..', 'data', 'tmp-state');
   const { guard } = makeGuard('highTx');
   await guard.submit(base('persist_1', { amount: '10' }));
   const file = guard.save(dir);

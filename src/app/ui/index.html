@@ -1250,7 +1250,7 @@
           <div class="field">
             <label>Swap output destination</label>
             <div class="swap-dest">
-              <code id="swap-dest">0x9a1f4b0c…</code>
+              <code id="swap-dest">loading policy…</code>
               <label class="toggle" title="Redirect the swap output to 0xdeadbeef… and watch the policy refuse it">
                 <input type="checkbox" id="tamper" />
                 <span>tamper destination</span>
@@ -1312,8 +1312,8 @@
         </div>
         <div id="attack-body">
           <p class="empty">
-            Thirteen scripted attempts, one throwaway guard. Nothing here can spend the live budget or touch the live audit
-            chain.
+            Runs the shared scenario catalogue (<code>src/demo/scenarios.ts</code>) on a throwaway guard per scenario.
+            Nothing here can spend the live budget or touch the live audit chain.
           </p>
         </div>
       </section>
@@ -1350,7 +1350,7 @@
     <footer class="page-foot">
       <span>Veto · policy firewall for NEAR agent wallets</span>
       <span>·</span>
-      <span>swap numbers from the recorded 1Click quote (<code id="foot-quote">1 NEAR → 4.914535 USDC</code>)</span>
+      <span>swap numbers from the recorded 1Click quote (<code id="foot-quote">1 NEAR → USDC</code>)</span>
       <span>·</span>
       <span>amounts are exact base units, never floats</span>
     </footer>
@@ -1367,19 +1367,20 @@
       const ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
       const esc = (value) => String(value === undefined || value === null ? "" : value).replace(/[&<>"']/g, (char) => ESCAPES[char]);
 
-      const DECIMALS = new Intl.NumberFormat(undefined, { maximumFractionDigits: 6 });
-      const WHOLE = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
-      const USD = new Intl.NumberFormat(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 2 });
+      // Pinned to en-US so a screenshot shows crypto-style decimals ("4.917804",
+      // "$10.00") on any machine, instead of depending on the host locale.
+      const DECIMALS = new Intl.NumberFormat("en-US", { maximumFractionDigits: 6 });
+      const WHOLE = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
+      const USD = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
 
       const APPROVER = "alice.near";
       const ATTACKER_DESTINATION = "0xdeadbeef00000000000000000000000000000000";
-      /** Only used until /api/state arrives: the real pin lives in the policy. */
-      const FALLBACK_DESTINATION = "0x9a1f4b0c2d7e8f6a3b5c1d9e0f2a4b6c8d0e1f3a";
 
+      /** The swap destination pinned in the policy, or "" until /api/state arrives. */
       function pinnedDestination() {
         const intents = (view.state && view.state.policy && view.state.policy.intents) || {};
         const list = Array.isArray(intents.allowedDestinations) ? intents.allowedDestinations : [];
-        return list[0] || FALLBACK_DESTINATION;
+        return list[0] || "";
       }
 
       const view = {
@@ -1410,7 +1411,7 @@
 
       function clockTime(iso) {
         const date = new Date(iso);
-        return Number.isNaN(date.getTime()) ? "" : date.toLocaleTimeString(undefined, { hour12: false });
+        return Number.isNaN(date.getTime()) ? "" : date.toLocaleTimeString("en-GB", { hour12: false });
       }
 
       function ago(iso) {
@@ -1746,19 +1747,25 @@
         const results = Array.isArray(run.results) ? run.results : [];
         const host = $("attack-body");
         if (results.length === 0) {
-          host.innerHTML = `<p class="empty">The simulator returned no cases.</p>`;
+          host.innerHTML = `<p class="empty">The simulator returned no scenarios.</p>`;
           return;
         }
+        const denied = results.filter((entry) => entry.verdict === "deny").length;
+        const allowed = results.filter((entry) => entry.verdict === "allow").length;
+        const escalated = results.filter((entry) => entry.verdict === "require_approval").length;
+        const total = results.length;
+
         const rows = results
           .map((entry, index) => {
             const kind = verdictClass(entry.verdict);
             const codes = (entry.codes || []).map((code) => `<span class="code">${esc(code)}</span>`).join("");
             const mismatch = entry.matchesExpectation === false ? ' <span class="chip deny">unexpected</span>' : "";
-            return `<tr class="${kind}">
+            const subject = entry.subject ? `<div class="a-subject">${esc(entry.subject)}</div>` : "";
+            return `<tr class="${kind}" title="${esc(entry.detail || entry.engine || "")}">
               <td class="a-idx">${String(index + 1).padStart(2, "0")}</td>
               <td>
                 <div class="a-name">${esc(entry.name)}${mismatch}</div>
-                <div class="a-subject">${esc(entry.subject)}</div>
+                ${subject}
               </td>
               <td>${verdictChip(entry.verdict)}</td>
               <td><div class="a-wall">${esc(entry.wall)}</div></td>
@@ -1770,12 +1777,17 @@
         host.innerHTML = `
           <div class="attack-summary">
             ${verdictChip("deny")}
-            <span><b>${WHOLE.format(run.denied)}</b> of ${WHOLE.format(run.count)} refused</span>
+            <span><b>${WHOLE.format(denied)}</b> of ${WHOLE.format(total)} refused</span>
             <span class="dim">·</span>
             ${verdictChip("allow")}
-            <span><b>${WHOLE.format(run.allowed)}</b> legitimate payment let through</span>
+            <span><b>${WHOLE.format(allowed)}</b> allowed</span>
+            ${
+              escalated > 0
+                ? `<span class="dim">·</span>${verdictChip("require_approval")}<span><b>${WHOLE.format(escalated)}</b> escalated to a human</span>`
+                : ""
+            }
             <span class="dim">·</span>
-            <span class="hint">${run.mismatches === 0 ? "every case landed where the catalogue says it should" : `${WHOLE.format(run.mismatches)} case(s) did not match expectations`}</span>
+            <span class="hint">${run.mismatches === 0 ? "every scenario landed where the catalogue says it should" : `${WHOLE.format(run.mismatches)} scenario(s) did not match expectations`}</span>
           </div>
           <div class="attack-scroll">
             <table class="attack">
@@ -1785,7 +1797,11 @@
               <tbody>${rows}</tbody>
             </table>
           </div>
-          <p class="note">${esc(run.policyNote || "")}</p>
+          <p class="note">
+            Scenarios come from the shared catalogue in <code>src/demo/scenarios.ts</code>. Each one runs on its own
+            throwaway guard, with the two advisory risk escalations disabled, so the live ledger, approvals and audit
+            chain are never touched. Every hard wall is the shipped policy.
+          </p>
         `;
       }
 
@@ -1872,7 +1888,7 @@
           amountOut: quote.amountOut || "4914535",
           minAmountOut: quote.minAmountOut || "4889962",
           slippageBps: 50,
-          destinationAddress: $("tamper").checked ? ATTACKER_DESTINATION : PINNED_DESTINATION,
+          destinationAddress: $("tamper").checked ? ATTACKER_DESTINATION : pinnedDestination(),
           expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
         };
       }
@@ -1900,9 +1916,14 @@
         };
 
         if (kind === "intent.swap") {
+          const destination = $("tamper").checked ? ATTACKER_DESTINATION : pinnedDestination();
+          if (destination.length === 0) {
+            toast("the policy has not loaded its pinned swap destination yet", "warn");
+            return null;
+          }
           action.venue = "near-intents";
           action.slippageBps = 50;
-          action.destinationAddress = $("tamper").checked ? ATTACKER_DESTINATION : PINNED_DESTINATION;
+          action.destinationAddress = destination;
           action.quote = currentQuote();
         } else if (recipient.length > 0) {
           action.to = recipient;
@@ -1971,7 +1992,11 @@
         $("form-hint").textContent = isSwap
           ? "Swaps are checked against the 1Click quote, the venue, slippage and the pinned destination."
           : "Evaluate is a dry run: it never books a spend.";
-        $("swap-dest").textContent = $("tamper").checked ? `${shortHash(ATTACKER_DESTINATION, 14)} (tampered)` : `${shortHash(PINNED_DESTINATION, 14)} (pinned)`;
+        $("swap-dest").textContent = $("tamper").checked
+          ? `${shortHash(ATTACKER_DESTINATION, 14)} (tampered)`
+          : pinnedDestination()
+            ? `${shortHash(pinnedDestination(), 14)} (pinned)`
+            : "loading policy…";
       }
 
       /* -------------------------------------------------------- approvals */
@@ -2012,6 +2037,8 @@
         renderApprovals(state);
         renderBudgets(state);
         renderAudit(state.audit, state.policyHash);
+        // The pinned swap destination comes from the policy, so refresh the form label.
+        updateFormForKind();
       }
 
       async function refreshState() {

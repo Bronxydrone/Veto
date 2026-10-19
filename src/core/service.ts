@@ -193,34 +193,49 @@ export class VetoGuard {
       reasonCodes: decision.reasons.map((r) => r.code),
     });
 
-    this.audit.append({
-      at: decision.evaluatedAt,
-      actor: action.actor,
-      actionId: action.id,
-      kind: action.kind,
-      asset: action.asset,
-      amount: decision.amount,
-      to: action.to ?? null,
-      verdict: decision.verdict,
-      reasons: decision.reasons.map((r) => r.code),
-      riskScore: decision.risk.score,
-      policyHash: this.policy.hash,
-      payloadHash: hashObject(action),
-    });
+    const audit = (verdict: Verdict, reasons: string[]): void => {
+      this.audit.append({
+        at: decision.evaluatedAt,
+        actor: action.actor,
+        actionId: action.id,
+        kind: action.kind,
+        asset: action.asset,
+        amount: decision.amount,
+        to: action.to ?? null,
+        verdict,
+        reasons,
+        riskScore: decision.risk.score,
+        policyHash: this.policy.hash,
+        payloadHash: hashObject(action),
+      });
+    };
 
     if (decision.verdict === 'deny') {
+      audit('deny', decision.reasons.map((r) => r.code));
       return { decision, execution: null, approval: null };
     }
 
     if (decision.verdict === 'require_approval') {
+      audit('require_approval', decision.reasons.map((r) => r.code));
       const approval = this.enqueueApproval(action, decision);
       return { decision, execution: null, approval };
     }
 
+    // Allowed: only now, after the executor has actually run, do we say so.
     const execution = await this.execute(action, decision);
     if (execution.status === 'failed') {
-      return { decision: { ...decision, verdict: 'deny', reasons: [...decision.reasons, { code: 'EXECUTION_FAILED', severity: 'deny', message: execution.detail }] }, execution, approval: null };
+      audit('deny', ['EXECUTION_FAILED']);
+      return {
+        decision: {
+          ...decision,
+          verdict: 'deny',
+          reasons: [...decision.reasons, { code: 'EXECUTION_FAILED', severity: 'deny', message: execution.detail }],
+        },
+        execution,
+        approval: null,
+      };
     }
+    audit('allow', decision.reasons.map((r) => r.code));
     this.commitSpend(action, decision);
     return { decision, execution, approval: null };
   }
