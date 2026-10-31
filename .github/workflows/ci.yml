@@ -1,0 +1,62 @@
+name: ci
+
+# The core of Veto has no runtime dependencies: no install step below on purpose.
+# If this pipeline ever needs `npm install`, the "download and run" claim in the
+# README has quietly stopped being true.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  engine:
+    name: engine (node 24, no dependencies)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Unit and adversarial tests
+        run: npm run test:all
+      - name: Attack catalogue (fails if any verdict disagrees)
+        run: npm run attack
+      - name: Narrative demo
+        run: npm run demo
+      - name: Five decisions (the MVP screen)
+        run: npm run mvp
+      - name: Chain-signature address derivation
+        run: npm run chainsig || echo "::warning::chainsig needs a reachable MPC signer"
+      - name: Preflight - is this repository shippable?
+        run: npm run preflight -- --offline
+
+  contract:
+    name: contract (rust, wasm)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      # These tests run on a real NEAR VM, which needs a C toolchain for aws-lc-sys.
+      # This job is the only place they are executed, so it is the gate for the
+      # committed wasm as well.
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Contract unit tests
+        working-directory: contract
+        run: cargo test --locked
+      - name: Build wasm
+        working-directory: contract
+        run: cargo build --locked --release --target wasm32-unknown-unknown
+      - name: The committed wasm matches the hash in the README
+        run: |
+          sha=$(sha256sum contract/res/veto_policy.wasm | cut -c1-8)
+          size=$(stat -c%s contract/res/veto_policy.wasm)
+          echo "committed wasm: ${size} bytes, sha ${sha}"
+          grep -q "${sha}" README.md
+          grep -q "${size}" README.md
