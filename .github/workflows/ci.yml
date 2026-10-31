@@ -58,5 +58,9 @@ jobs:
           sha=$(sha256sum contract/res/veto_policy.wasm | cut -c1-8)
           size=$(stat -c%s contract/res/veto_policy.wasm)
           echo "committed wasm: ${size} bytes, sha ${sha}"
+          # The README writes the size with a thousands separator (307,028), so compare
+          # the numbers rather than the strings.
+          readme_size=$(grep -oE '[0-9]{1,3}(,[0-9]{3})+ bytes' README.md | head -1 | tr -d ', ' | sed 's/bytes//')
+          echo "README says: ${readme_size} bytes"
+          test "${size}" = "${readme_size}"
           grep -q "${sha}" README.md
-          grep -q "${size}" README.md

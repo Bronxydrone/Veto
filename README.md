@@ -1,5 +1,7 @@
 # Veto
 
+[![ci](https://github.com/Bronxydrone/Veto/actions/workflows/ci.yml/badge.svg)](https://github.com/Bronxydrone/Veto/actions/workflows/ci.yml)  [![tests](https://img.shields.io/badge/tests-85%20js%20%C2%B7%2031%20rust-brightgreen)](https://github.com/Bronxydrone/Veto#2-try-it-in-five-minutes)
+
 **A spending firewall for AI agent wallets on NEAR.** Agents can spend; they just cannot spend everything.
 
 It is not a tool-call policy library. Those decide whether an agent may call a function;
