@@ -81,7 +81,7 @@ need a browser):
 X counts every link as 23 characters regardless of length, so the numbers below have
 room. Send the single post if the account has no Premium; otherwise the thread.
 
-**Single post (301 characters with the link counted as 23 - it fits):**
+**Single post (~256 characters on X: links count as 23, the text itself is 270):**
 
 ```
 Built at NEAR HACKATHON: Veto, a spending firewall for AI agents on NEAR.
