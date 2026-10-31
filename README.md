@@ -354,7 +354,9 @@ refusal, read from the on-chain `deny` event (§4). That is a stronger check tha
 mock harness in one respect — it runs on real storage, in a real VM — and a weaker one
 in another: it cannot fake a 30-day clock rollover, which is what the unit tests cover.
 The unit suite is committed and runs on any machine with a C toolchain via
-`contract/test.ps1`.
+`contract/test.ps1`. GitHub Actions runs both suites on every push
+([`.github/workflows/ci.yml`](.github/workflows/ci.yml)): the engine on Node 24 with no
+dependencies, and the contract against a real NEAR VM, where all 31 tests pass.
 
 Deploy and call examples, exact JSON payloads and the reason-code table are in
 [`contract/README.md`](contract/README.md). No script in this repository signs or
