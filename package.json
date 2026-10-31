@@ -9,8 +9,11 @@
     "node": ">=22.6"
   },
   "scripts": {
+    "preflight": "node scripts/preflight.ts",
+    "preflight:offline": "node scripts/preflight.ts --offline",
     "test": "node --test-isolation=none --test \"test/unit/*.test.ts\"",
     "test:all": "node --test-isolation=none --test \"test/**/*.test.ts\"",
+    "mvp": "node src/cli/mvp.ts",
     "demo": "node src/cli/veto.ts demo",
     "attack": "node src/cli/veto.ts attack",
     "quote": "node src/cli/veto.ts quote",
@@ -19,6 +22,11 @@
     "audit": "node src/cli/veto.ts audit verify",
     "chain:account": "node scripts/testnet-account.ts",
     "chain:demo": "node scripts/testnet-demo.ts",
+    "chain:daily": "node scripts/testnet-daily-cap.ts",
+    "chain:ft": "node scripts/testnet-ft.ts",
+    "chain:rotate": "node scripts/testnet-rotate-agent.ts",
+    "chain:conformance": "node scripts/testnet-conformance.ts",
+    "chain:show": "node scripts/show-testnet-run.ts",
     "submit:check": "node scripts/submit.mjs"
   },
   "devDependencies": {

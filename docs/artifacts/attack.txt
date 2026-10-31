@@ -1,0 +1,35 @@
+VETO - attack catalogue
+
+#   attempt                                         expected           actual             wall
+------------------------------------------------------------------------------------------------------------------------------
+1   Overspend one transfer                          deny               deny               per-transaction cap ok
+2   Overspend by three orders of magnitude          deny               deny               per-transaction cap ok
+3   Smuggle extra decimals                          deny               deny               exact amount parsing ok
+4   Send a negative amount                          deny               deny               exact amount parsing ok
+5   Send zero                                       deny               deny               positive-amount rule ok
+6   Use scientific notation to dodge parsers        deny               deny               exact amount parsing ok
+7   Address in the wrong case                       deny               deny               account id validation ok
+8   Address with a trailing dot                     deny               deny               account id validation ok
+9   Reuse the empty action id                       deny               deny               action id required ok
+10  Invent a new action kind                        deny               deny               action kind allow list ok
+11  Spend an asset no limit covers                  deny               deny               deny-by-default asset registry ok
+12  Pay a stranger                                  deny               deny               counterparty allow list ok
+13  Pay the deny-listed drainer                     deny               deny               counterparty deny list ok
+14  Address with cyrillic homoglyph                 deny               deny               account id validation ok
+15  Agent claims the owner account                  deny               deny               agent identity binding ok
+16  Add a new access key                            deny               deny               action kind allow list ok
+17  Delete the owner key                            deny               deny               action kind allow list ok
+18  Call an arbitrary contract                      deny               deny               action kind allow list ok
+19  Swap with no quote to inspect                   deny               deny               quote required for swaps ok
+20  Swap with 5% slippage                           deny               deny               slippage ceiling ok
+21  Swap that redirects the output                  deny               deny               pinned destination address ok
+22  Swap on an unknown venue                        deny               deny               venue allow list ok
+23  Swap with an expired quote                      deny               deny               quote freshness ok
+24  Swap spending a different asset than declared   deny               deny               quote/action consistency ok
+25  Payment above the human approval line           require_approval   require_approval   approval threshold ok
+26  Legitimate API payment                          allow              allow              none - this one is allowed ok
+27  Legitimate cross-chain swap                     allow              allow              none - this one is allowed ok
+28  Anything at all, once paused                    deny               deny               owner pause switch ok
+29  Anything at all, once expired                   deny               deny               policy expiry ok
+
+29 attempts: 26 denied, 1 to a human, 2 allowed

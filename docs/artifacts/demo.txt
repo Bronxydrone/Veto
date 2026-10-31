@@ -1,0 +1,27 @@
+VETO - the spending firewall for AI agents
+policy argo-spending-policy  hash aec57ca4a000340f...
+owner  alice.near   agent argo.near
+limits NEAR: 1.5/tx, 5/day   USDC: 25/tx, 100/day
+escalation above $10 a human co-signs (alice.near)
+
+ 1. ALLOW           pay compute.near for 5 USDC of inference   all checks passed
+ 2. NEEDS APPROVAL  pay for a data feed, 12 USDC               APPROVAL_REQUIRED, RISK_ESCALATION
+    above the $10 line: a human must co-sign
+ 3. DENY            try 26 USDC in one go                      PER_TX_LIMIT, APPROVAL_REQUIRED
+ 4. DENY            pay a stranger                             RECIPIENT_NOT_ALLOWED, APPROVAL_REQUIRED, RISK_ESCALATION
+ 5. DENY            add its own access key                     ACTION_NOT_ALLOWED
+
+NEAR Intents quote (recorded live 2026-10-19T19:40:41.876Z): 1.0 NEAR -> 4.917804 USDC on Arbitrum
+ 6. ALLOW           swap 1 NEAR -> 4.917804 USDC on Arbitrum, pinned address all checks passed
+    the policy checks venue, slippage, expiry and destination before the quote is used
+ 7. DENY            same quote, output redirected to 0xdeadbeef... DESTINATION_NOT_ALLOWED
+    a swapped destination cannot be smuggled through an otherwise valid quote
+ 8. NEEDS APPROVAL  pay 20 USDC (needs a human)                APPROVAL_REQUIRED
+    queued as apr_7598621fe080, expires 2026-11-02T12:15:49.000Z
+    agent tries to approve itself: refused
+    owner approves: executed, budget booked
+
+audit chain 12 records, head defeb60b13b221e8..., verified
+tamper check edited record 2 by hand -> detected at record 2
+
+Result: 12 decisions, no money left the walls.

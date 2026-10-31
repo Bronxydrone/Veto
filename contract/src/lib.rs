@@ -56,9 +56,15 @@ pub const R_NO_LIMIT: &str = "NO_LIMIT";
 /// `amount == 0`.
 pub const R_NON_POSITIVE_AMOUNT: &str = "NON_POSITIVE_AMOUNT";
 /// `amount > per_tx`.
-pub const R_PER_TX_LIMIT: &str = "PER_TX_LIMIT";
-/// `day_spent + amount > daily`.
+pub const R_PER_TX_LIMIT: &str = "PER_TX_LIMIT";/// `day_spent + amount > daily`.
 pub const R_DAILY_LIMIT: &str = "DAILY_LIMIT";
+/// The vault cannot cover the transfer once its storage stake is reserved.
+///
+/// Without this check the spend would write its counters, advance the hash chain and
+/// emit a `spend` event, and only then would the transfer receipt fail with
+/// `LackBalanceForState` - burning budget without delivering funds. Found on testnet
+/// (see `../docs/TESTNET.md`); the fix is the check below in `spend`.
+pub const R_INSUFFICIENT_BALANCE: &str = "INSUFFICIENT_BALANCE";
 /// `month_spent + amount > monthly` (monthly != 0).
 pub const R_MONTHLY_LIMIT: &str = "MONTHLY_LIMIT";
 
@@ -208,6 +214,15 @@ fn hex_encode(bytes: &[u8]) -> String {
 #[ext_contract(ext_ft_transfer)]
 pub trait FtTransfer {
     fn ft_transfer(&mut self, receiver_id: AccountId, amount: U128, memo: Option<String>);
+}
+
+/// yoctoNEAR this account can move without falling below its storage stake.
+///
+/// A NEAR account must keep `storage_usage * storage_byte_cost` locked; a transfer that
+/// would dip below that fails at protocol level. `spend` uses this to refuse up front.
+pub fn available_native_balance() -> u128 {
+    let locked = env::storage_byte_cost().saturating_mul(env::storage_usage() as u128);
+    env::account_balance().saturating_sub(locked).as_yoctonear()
 }
 
 fn emit_event(event: &str, data: near_sdk::serde_json::Value) {
@@ -401,6 +416,31 @@ impl Contract {
             ));
         }
 
+        // Fail closed on a vault that cannot cover the transfer. Without this the
+        // counters would advance and the `spend` event would be emitted, and only then
+        // would the transfer receipt fail with `LackBalanceForState`: budget burned,
+        // funds not delivered, and a log that says "spend". Found on testnet.
+        if asset_id == NATIVE_ASSET_ID {
+            let available = available_native_balance();
+            if available < amount.0 {
+                emit_event(
+                    "deny",
+                    near_sdk::serde_json::json!({
+                        "reason": R_INSUFFICIENT_BALANCE,
+                        "asset": asset_id,
+                        "amount": amount.0.to_string(),
+                        "available": available.to_string(),
+                        "to": to.as_str(),
+                        "policy_hash": self.policy_hash,
+                    }),
+                );
+                env::panic_str(&format!(
+                    "Veto: spend denied: {} (vault has {} yoctoNEAR available after its storage stake, needs {})",
+                    R_INSUFFICIENT_BALANCE, available, amount.0
+                ));
+            }
+        }
+
         // The policy passed, so these numbers fit the limits; `saturating_add` is
         // only a belt-and-braces guard for an unlimited (monthly == 0) policy.
         let rolled = roll_usage(&usage, now);
@@ -461,7 +501,14 @@ impl Contract {
             amount.0,
             &to,
         ) {
-            Ok(()) => "allow".to_string(),
+            Ok(()) => {
+                // Keep the view honest about the vault's ability to pay: `spend` refuses
+                // with INSUFFICIENT_BALANCE, so `check` must say the same thing.
+                if asset_id == NATIVE_ASSET_ID && available_native_balance() < amount.0 {
+                    return format!("deny:{}", R_INSUFFICIENT_BALANCE);
+                }
+                "allow".to_string()
+            }
             Err(code) => format!("deny:{}", code),
         }
     }
@@ -573,6 +620,8 @@ mod tests {
     const T0: u64 = 1_700_000_000_000_000_000;
     const DAY: u64 = NS_PER_DAY;
     const USDC: &str = "usdc.near";
+    /// Mocked account balance: enough to cover any transfer these tests ask for.
+    const FUNDED_BALANCE: u128 = 1_000 * 10u128.pow(24);
 
     fn owner() -> AccountId {
         accounts(0)
@@ -591,12 +640,28 @@ mod tests {
     }
 
     fn ctx(caller: AccountId, ts: u64) -> near_sdk::VMContext {
+        // Fund the mocked account: `spend` refuses when the vault cannot cover the
+        // transfer after its storage stake, so a zero balance would make every native
+        // spend in these tests fail with INSUFFICIENT_BALANCE for the wrong reason.
         VMContextBuilder::new()
             .current_account_id("veto.near".parse().unwrap())
             .predecessor_account_id(caller.clone())
             .signer_account_id(caller)
             .block_timestamp(ts)
             .attached_deposit(NearToken::from_yoctonear(0))
+            .account_balance(NearToken::from_yoctonear(FUNDED_BALANCE))
+            .build()
+    }
+
+    /// A test context for an account that cannot cover its own transfers.
+    fn empty_ctx(caller: AccountId, ts: u64) -> near_sdk::VMContext {
+        VMContextBuilder::new()
+            .current_account_id("veto.near".parse().unwrap())
+            .predecessor_account_id(caller.clone())
+            .signer_account_id(caller)
+            .block_timestamp(ts)
+            .attached_deposit(NearToken::from_yoctonear(0))
+            .account_balance(NearToken::from_yoctonear(0))
             .build()
     }
 
@@ -722,6 +787,25 @@ mod tests {
     }
 
     // -- 2. per-transaction limit ------------------------------------------
+
+    #[test]
+    #[should_panic(expected = "INSUFFICIENT_BALANCE")]
+    fn native_spend_is_refused_when_the_vault_cannot_cover_it() {
+        // Setup under a funded context, then switch to an empty vault for the spend.
+        let mut contract = setup(100, 150, 400);
+        testing_env!(empty_ctx(agent(), T0));
+        contract.spend(NATIVE_ASSET_ID.to_string(), U128(100), alice(), None);
+    }
+
+    #[test]
+    fn check_agrees_when_the_vault_cannot_cover_the_transfer() {
+        let contract = setup(100, 150, 400);
+        testing_env!(empty_ctx(agent(), T0));
+        assert_eq!(
+            contract.check(NATIVE_ASSET_ID.to_string(), U128(100), alice()),
+            format!("deny:{}", R_INSUFFICIENT_BALANCE)
+        );
+    }
 
     #[test]
     #[should_panic(expected = "PER_TX_LIMIT")]

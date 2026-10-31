@@ -1,0 +1,70 @@
+{
+  "demo": {
+    "network": "testnet",
+    "contract": "5ac5ef1f12f81b18d16d05b038e9168bc92f5adfbf7a61994fc6345e34929633",
+    "vendor": "f2b01d0594579eea1c7305bd972464583469c0d6d232c1e5e11d578af872c680",
+    "agent": "18a227a22bd26094ef5de46e87152737ecd4f2ece95104f6cac712d15388b47a",
+    "policyHash": "aec57ca4a000340f31b0b95da8da35390b159797a2cf22c6810b8f5f89f7232a",
+    "transactions": {
+      "deploy": "9J4khkaMK3eNApQnDTYPTBt547pMBwhGWKzEV3CEqzBC",
+      "init": "BbsTWLvG5f59CKMsHgSuHrQrZGHYuoeeSUGvK3RPDniA",
+      "addRestrictedKey": "FuVdUWzARBcVvqjkRbd6npm4XTY6fX7DNwe5wFk6zpBL",
+      "deleteFullKey": "9PDkM5sMAbSFPqyK4N4EGFHFGMxvDUkiGhxUG7H2gyhW",
+      "setPolicy": "J7C1ywvwPB9wGikrYPmWruTfFXERVa7vsVZViniretfp",
+      "spend": "BEahB6BG83QHuExjuL2YHBMwnBPdWeegeYpzGur1pfhx"
+    },
+    "rejected": {
+      "overLimit": "WebAssembly trap: An `unreachable` opcode was executed.",
+      "pauseAttempt": "Access key does not allow method set_paused"
+    },
+    "onchain": {
+      "config": {
+        "owner": "5ac5ef1f12f81b18d16d05b038e9168bc92f5adfbf7a61994fc6345e34929633",
+        "agent": "18a227a22bd26094ef5de46e87152737ecd4f2ece95104f6cac712d15388b47a",
+        "paused": false,
+        "policy_hash": "aec57ca4a000340f31b0b95da8da35390b159797a2cf22c6810b8f5f89f7232a",
+        "allowlist": [
+          "f2b01d0594579eea1c7305bd972464583469c0d6d232c1e5e11d578af872c680"
+        ],
+        "limits": [
+          {
+            "asset_id": "near",
+            "per_tx": "1000000000000000000000000",
+            "daily": "2000000000000000000000000",
+            "monthly": "10000000000000000000000000"
+          }
+        ]
+      },
+      "usage": {
+        "day_spent": "250000000000000000000000",
+        "month_spent": "250000000000000000000000",
+        "day_start_ns": 1792439866875559700,
+        "month_start_ns": 1792439866875559700
+      },
+      "lastHash": "985f3cb4380984bca1e05c235594bb6631618f90242245f447f40cd5080c15e5",
+      "decisionCount": 1,
+      "checkOk": "allow",
+      "checkBad": "deny:PER_TX_LIMIT",
+      "checkStranger": "deny:RECIPIENT_NOT_ALLOWED",
+      "vendorBalance": "5250000000000000000000000"
+    },
+    "agentPublicKey": "ed25519:9oErXazyRy2xPQqGQzTX3ooS32kXWRiwoR8hcoXXD2RX"
+  },
+  "daily": {
+    "network": "testnet",
+    "contract": "5ac5ef1f12f81b18d16d05b038e9168bc92f5adfbf7a61994fc6345e34929633",
+    "vendor": "f2b01d0594579eea1c7305bd972464583469c0d6d232c1e5e11d578af872c680",
+    "spentBefore": "2000000000000000000000000",
+    "spentAfter": "2000000000000000000000000",
+    "dailyLimit": "2000000000000000000000000",
+    "checkAfter": "deny:DAILY_LIMIT",
+    "first": null,
+    "second": {
+      "ok": false,
+      "hash": "FGa1eUmsadSsdVLKP1mYQtQ5kQFwCQS2RYCiex89L2B1",
+      "error": "WebAssembly trap: An `unreachable` opcode was executed.",
+      "denyReason": "DAILY_LIMIT"
+    },
+    "at": "2026-10-19T20:06:08.010Z"
+  }
+}

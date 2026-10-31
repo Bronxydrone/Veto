@@ -110,7 +110,8 @@ broken token can never grant free spending.
 ### Reason codes
 
 `PAUSED`, `NON_POSITIVE_AMOUNT`, `RECIPIENT_NOT_ALLOWED`, `NO_LIMIT`, `PER_TX_LIMIT`,
-`DAILY_LIMIT`, `MONTHLY_LIMIT`.
+`DAILY_LIMIT`, `MONTHLY_LIMIT`, and `INSUFFICIENT_BALANCE` (the vault cannot cover the transfer
+once its storage stake is reserved).
 
 `check` returns them as `deny:<CODE>`; `spend` panics with a message containing the
 code, e.g.
@@ -148,9 +149,26 @@ Evaluation order (first failure wins): `PAUSED` → `NON_POSITIVE_AMOUNT` →
 
 * `asset_id = "near"` → native NEAR, sent with `Promise::new(to).transfer(amount)`.
 * any other `asset_id` → treated as the **NEP-141 contract account id** (e.g.
-  `usdc.near`, `usdt.tether-token.near`) and receives
+  `usdc.near`, `usdt.tether-token.near`, `wrap.testnet`) and receives
   `ft_transfer({receiver_id, amount, memo: null})` with **1 yoctoNEAR** attached and
   30 TGas of gas.
+
+Two things to know before wiring a token in (both learned on testnet, see
+[`../docs/TESTNET.md`](../docs/TESTNET.md)):
+
+1. **Storage registration is the caller's job.** The token contract must know both the
+   vault and the payee, or `ft_transfer` fails *inside the cross-contract call*, where
+   the panic is much harder to read than a policy refusal. Register the vault once with
+   `storage_deposit` when you fund it, and register payees before allow-listing them.
+2. **The vault is its own account.** In the reference deployment the contract sits on
+   the owner account, so wrapping NEAR credits the vault directly; a `ft_transfer` from
+   the owner to the vault would be a self-transfer and the token rejects it
+   (`Sender and receiver should be different`). Fund the vault by wrapping from it, or
+   deploy the contract on its own sub-account and transfer from the owner.
+3. **The agent's function-call key needs gas money, not allowance room** for token
+   spends: the deposit attached to `spend` is zero, so a key with an exhausted NEAR
+   allowance can still call `spend` — but its allowance is also charged for gas, so
+   keep it funded.
 
 ### Event (NEP-297)
 
@@ -164,8 +182,33 @@ EVENT_JSON:{"standard":"veto","version":"1.0.0","event":"spend","data":{
 
 ---
 
-## 3. Exact JSON payloads (near-cli)
+## 3. Funding the vault
 
+The contract holds the money, so the **contract account's balance** must cover two
+things at once: the storage stake for the deployed code (a 304 KB wasm locks about
+**3.05 NEAR** on NEAR) and whatever it has to transfer.
+
+A transfer that would push the balance below the lock fails at protocol level, with
+a message that looks like a policy failure:
+
+```
+spend(0.75 NEAR): REJECTED  Account 5ac5…lacks balance … for state
+```
+
+That is not Veto refusing anything - the transaction never reached the policy check. Since
+the testnet run that hit it, `spend` and `check` both pre-check the balance and answer
+`deny:INSUFFICIENT_BALANCE` instead, so the partial failure is gone. Operationally:
+
+- fund the vault with a healthy margin above `storage_stake + expected payouts`, and
+- if you expect to move large sums, deploy the code as a **global contract**
+  (`use_global_contract`) so no per-account code stake is locked, or
+- top the vault up from the treasury (`transfer`) - the owner account can always do
+  that, the agent key cannot.
+
+This is documented because it happened during the testnet run and cost a confusing
+minute: see [`../docs/TESTNET.md`](../docs/TESTNET.md), "One operational gotcha".
+
+## 4. Exact JSON payloads (near-cli)
 Amounts in `U128` fields are serialised as **decimal strings** (a JSON number also
 works while it fits in `u64`; strings are the safe form). Argument names are snake_case;
 near-sdk also accepts camelCase spellings.
@@ -264,7 +307,7 @@ near contract call-function as-transaction veto.testnet spend json-args \
 
 ---
 
-## 4. Build and test
+## 5. Build and test
 
 ```bash
 # 1. wasm (the deployable artifact)
@@ -296,7 +339,7 @@ must be available; the wasm build does not.
 
 ---
 
-## 5. Storage layout
+## 6. Storage layout
 
 One Borsh struct under the default state key:
 

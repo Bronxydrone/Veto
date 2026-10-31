@@ -10,6 +10,12 @@ agent ──► intent ──► [ Veto policy engine ] ──► allow ──�
                             └─ require_approval ─► a human co-signs, then it moves
 ```
 
+![npm run demo](docs/shots/demo.png)
+
+*`npm run demo` — allowed payment, approval, three refusals, a live NEAR Intents
+quote, the same quote with a redirected destination refused, a human approval, and
+a tamper check that catches an edited audit record.*
+
 ---
 
 ## 1. The problem
@@ -58,14 +64,32 @@ Each step is "do this, see that". Nothing here needs a wallet, a key or funds.
 
 | # | Do this | See that |
 |---|---|---|
-| 1 | `npm run test:all` | `# pass 84`, `# fail 0` — engine, policy, ledger, audit, approvals, chain signatures, plus the adversarial suite where every verdict is asserted. |
+| 0 | `npm run mvp` | The whole product on one screen, in ten seconds and with no network: one payment allowed, one over the per-tx cap refused, one stranger refused, one key change refused, one payment escalated to the owner and executed after the agent is told it cannot approve itself. Nine audit records, chain verified. |
+| 1 | `npm run test:all` | `# pass 85`, `# fail 0` — engine, policy, ledger, audit, approvals, chain signatures, plus the adversarial suite where every verdict is asserted. |
 | 2 | `npm run demo` | The numbered narrative above: 12 decisions, one approval flow (including the agent being refused permission to approve its own payment), one real NEAR Intents quote, `audit chain verified`, and a tamper check that *detects* an edited record. |
 | 3 | `npm run attack` | A 29-row table ending in `29 attempts: 26 denied, 1 to a human, 2 allowed`. Every row names the wall it hit. Exit code 1 if any row disagrees with its claim. |
 | 4 | `npm run quote` | Fetches a **live** quote from `https://1click.chaindefuser.com/v0/quote` (1 NEAR → USDC on Arbitrum), then prints all ~19 policy checks with `pass`/`FAIL`. Add an address to see the same live quote refused: `npm run quote 0xdeadbeef00000000000000000000000000000000`. |
 | 5 | `npm run chainsig` | Derives the agent's cross-chain address from NEAR's MPC signer and prints `match: the only address this agent may receive swaps on is the one the MPC derives for it`. |
 | 6 | `npm run serve` | Dashboard on <http://127.0.0.1:8787>: policy, live budgets, decision feed with per-check detail, approval queue, 29-scenario attack simulator, audit-chain verifier. |
 | 7 | `npm run audit` | `{ "ok": true, "records": …, "head": "…" }` — the audit chain of the last dashboard/CLI process. |
-| 8 | `npm run chain:demo` | Deploys the contract to **NEAR testnet** and runs the four calls in §4: agent spends inside the limits (succeeds), agent tries 1.5× the cap (reverted, with a readable `deny` event), agent tries to pause the contract (refused by its key). Needs network and faucet-funded testnet accounts; already-run evidence with explorer links is in [`docs/TESTNET.md`](docs/TESTNET.md). |
+| 8 | `npm run chain:demo` | Deploys the contract to **NEAR testnet** and runs the calls in §4: agent spends inside the limits (succeeds), agent tries 1.5× the cap (reverted, with a readable `deny` event), agent tries to pause the contract (refused by its key). Needs network and faucet-funded testnet accounts; already-run evidence with explorer links is in [`docs/TESTNET.md`](docs/TESTNET.md). |
+| 9 | `npm run chain:daily` | Fills the rolling daily budget on testnet, then tries to exceed it: the contract reverts with `DAILY_LIMIT` and the script **reads the reason back from the failed receipt's `deny` event**. |
+| 10 | `npm run chain:conformance` | **28/28 checks against the deployed contract**: owner/agent/allow-list/policy-hash on chain, four NEAR and two wNEAR `check` answers, six refused spends with their exact reason codes, three owner-only calls refused by the agent key, one agent-only call refused for the owner, and the vendor's wNEAR balance. Moves no funds, changes no state. |
+| 11 | `npm run chain:ft` | The **NEP-141 path**, on chain, with wNEAR: wrap NEAR into the vault, install a policy with both a `near` and a `wrap.testnet` limit, let the agent spend 0.40 wNEAR (the vendor's token balance really changes), then watch 0.60 wNEAR get reverted with `PER_TX_LIMIT`. |
+| 12 | `npm run chain:rotate` | Rotates the agent account: a fresh faucet-funded account gets a `spend`-only key, deletes its full-access key, and the owner points the contract at it with `set_agent`. This is also the compromise response, and it is what unblocked the demo when the old key's allowance ran out. |
+
+Before publishing anything, `npm run preflight` answers one question — *is this
+repository shippable right now?* It checks the static facts (policy compiles, assets exist,
+the wasm matches the size and hash quoted here, every relative link resolves, the
+submission payload is valid, secrets are gitignored) and then runs every command above,
+reporting only exit codes:
+
+```
+16 passed, 0 failed, 0 skipped
+shippable: the repository is consistent and every command exited 0.
+```
+
+Add `--offline` to skip the three checks that need the network, and `--published` to also prove the repository is live on GitHub (public, branch `main`, README published).
 
 Offline? Steps 1–3, 6 and 7 work with no network at all: the 1Click quote is a
 recorded fixture (`data/fixtures/quote.json`), and each step says so when the
@@ -178,7 +202,7 @@ recomputed.
 | **Function-call access keys** | The agent's only key is a function-call key scoped to `spend` on the contract, with its own allowance. | **Live on testnet** — the agent deletes its full-access key; transaction 4 in [`docs/TESTNET.md`](docs/TESTNET.md). |
 | **Named accounts / sub-accounts** | Owner, agent and every allow-listed vendor are named accounts, which keeps the allow list human-auditable. | Used throughout. |
 | **NEP-297 events** | `spend`, `deny` and `withdraw` events, indexable. | Implemented and observed on testnet. |
-| **NEAR testnet contract** | `contract/` builds a `wasm32-unknown-unknown` contract with 29 unit tests and is deployed and exercised on testnet. | **Live**: deploy, policy install, a successful spend, a reverted spend, a key-level refusal. |
+| **NEAR testnet contract** | `contract/` builds a `wasm32-unknown-unknown` contract with 31 unit tests and is deployed and exercised on testnet. | **Live**: deploy, policy install, an allowed spend, a per-tx revert, a **rolling daily-cap revert**, a key-level refusal, a **NEP-141 (wNEAR) spend with a token-limit revert**, and **28/28 conformance checks** against the deployed instance. |
 
 Deliberately **not** used: a token, a DAO, a marketplace. Veto is the thing other
 agent projects would put in front of their wallet.
@@ -194,10 +218,24 @@ agent projects would put in front of their wallet.
 | owner installs policy | [`J7C1ywvwPB9wGikrYPmWruTfFXERVa7vsVZViniretfp`](https://testnet.nearblocks.io/txns/J7C1ywvwPB9wGikrYPmWruTfFXERVa7vsVZViniretfp) |
 | agent spends 0.25 NEAR (allowed) | [`BEahB6BG83QHuExjuL2YHBMwnBPdWeegeYpzGur1pfhx`](https://testnet.nearblocks.io/txns/BEahB6BG83QHuExjuL2YHBMwnBPdWeegeYpzGur1pfhx) |
 | agent tries 1.5 NEAR (reverted) | [`JDtQ44eSeoEKBATno3q9JuSmyrtgQSTUi9yRuEss3C4c`](https://testnet.nearblocks.io/txns/JDtQ44eSeoEKBATno3q9JuSmyrtgQSTUi9yRuEss3C4c) |
+| fills the 2 NEAR daily cap (4 spends) | [`ERWArc5F9cPZz2akExYA6Ngtz3p6DUBi4Uarj32Yk2e4`](https://testnet.nearblocks.io/txns/ERWArc5F9cPZz2akExYA6Ngtz3p6DUBi4Uarj32Yk2e4) → [`DGGuSiLn8KqEKaSUjA3JX5QjvhaBxfTU4f89Hp9vckXp`](https://testnet.nearblocks.io/txns/DGGuSiLn8KqEKaSUjA3JX5QjvhaBxfTU4f89Hp9vckXp) |
+| 0.50 NEAR more → **reverted: `DAILY_LIMIT`** | [`FGa1eUmsadSsdVLKP1mYQtQ5kQFwCQS2RYCiex89L2B1`](https://testnet.nearblocks.io/txns/FGa1eUmsadSsdVLKP1mYQtQ5kQFwCQS2RYCiex89L2B1) |
 | agent tries `set_paused` | rejected at validation: `Access key does not allow method set_paused` |
 
 Full transcript, the `deny` event payload and the state read back from the
 contract: [`docs/TESTNET.md`](docs/TESTNET.md).
+
+![testnet run](docs/shots/testnet.png)
+
+*The recorded testnet run: deploy, policy install, a 0.25 NEAR spend that moved
+funds, a 1.5 NEAR spend reverted by the contract, and a `set_paused` call refused by
+the agent's own key.*
+
+![conformance](docs/shots/conformance.png)
+
+*`npm run chain:conformance` — 28 promises checked against the deployed contract,
+with each refusal's reason code read from the on-chain `deny` event rather than
+trusted from the script.*
 
 ---
 
@@ -250,6 +288,9 @@ a denial rather than an allow.
 8. **Honest limits are documented** in [`docs/THREAT-MODEL.md`](docs/THREAT-MODEL.md):
    we bound consequences, we do not judge intent, price fairness is out of scope, and
    a tail-truncated log needs the anchored head to be caught.
+9. **The obvious questions have written answers** in [`docs/FAQ.md`](docs/FAQ.md): why
+   not just a function-call key allowance, why not a multisig, why an off-chain engine
+   exists at all, what happens if the owner is compromised.
 
 ---
 
@@ -265,11 +306,12 @@ src/demo/          the scenario catalogue shared by CLI, UI and tests
 src/cli/           veto demo | attack | quote | chainsig | evaluate | audit
 src/app/           dependency-free HTTP server + dashboard (no build step)
 examples/          the policy a human writes + three example actions
-contract/          Rust policy vault (near-sdk 5.29), owner/agent separation, 29 tests
-test/unit/         84 tests: money, YAML, policy, engine, toolbox, chain signatures
+contract/          Rust policy vault (near-sdk 5.29), owner/agent separation, 31 tests
+test/unit/         85 tests: money, YAML, policy, engine, toolbox, chain signatures
 test/adversarial/  catalogue assertions + stateful attacks
-scripts/           testnet accounts/demo, submission validator
+scripts/           testnet accounts/demo, submission validator, terminal-image renderer
 docs/              threat model, testnet evidence, demo script, submission checklist
+docs/shots/        demo, attack and testnet images rendered from real command output
 data/fixtures/     one recorded live 1Click quote (offline reproducibility)
 ```
 
@@ -279,8 +321,8 @@ data/fixtures/     one recorded live 1Click quote (offline reproducibility)
 
 ```bash
 cd contract
-./build.ps1                 # builds res/veto_policy.wasm  (304,345 bytes, sha256 3e577ee4…)
-./test.ps1                  # 29 unit tests
+./build.ps1                 # builds res/veto_policy.wasm  (307,028 bytes, sha256 1c5f5d30…)
+./test.ps1                  # 31 unit tests (needs a host C toolchain, see below)
 ```
 
 `build.ps1` and `test.ps1` are thin wrappers around `cargo build --release --target
@@ -289,8 +331,17 @@ explicitly. On a machine where PowerShell script execution is disabled, run
 `pwsh -ExecutionPolicy Bypass -File .\build.ps1` or call `cargo` directly.
 
 `cargo test` needs a host C toolchain (near-sdk's test harness pulls `aws-lc-sys`,
-`blst` and `secp256k1-sys`); `cargo build --target wasm32-unknown-unknown` does not.
-The testnet run in §4 is the end-to-end verification that needs no C compiler.
+`blst` and `secp256k1-sys`); `cargo build --target wasm32-unknown-unknown` does not,
+and neither does anything else in this repository.
+
+Because the build machine for this submission had no C compiler, the contract is
+verified **on the chain instead of in a mock**: `npm run chain:conformance` asserts
+28 promises against the deployed instance, including the exact reason code of every
+refusal, read from the on-chain `deny` event (§4). That is a stronger check than the
+mock harness in one respect — it runs on real storage, in a real VM — and a weaker one
+in another: it cannot fake a 30-day clock rollover, which is what the unit tests cover.
+The unit suite is committed and runs on any machine with a C toolchain via
+`contract/test.ps1`.
 
 Deploy and call examples, exact JSON payloads and the reason-code table are in
 [`contract/README.md`](contract/README.md). No script in this repository signs or
@@ -321,8 +372,11 @@ what keeps the policy testable without a chain.
 
 ## 10. Submission artefacts
 
-- [`docs/DEMO.md`](docs/DEMO.md) — 60-second video shot list, screenshot list, and
-  the X post text.
+- [`docs/shots/veto-demo.mp4`](docs/shots/veto-demo.mp4) — a 39-second walkthrough built
+  from the real command output (seven cards: what it is, `demo`, `attack`, testnet,
+  conformance, repo). No screen recording, no editing; every number is stdout.
+- [`docs/DEMO.md`](docs/DEMO.md) — the video shot list, the screenshot list, and the X
+  post text.
 - [`docs/SUBMISSION.md`](docs/SUBMISSION.md) — the fields only a human can provide,
   the timeline, and what to double-check before sending.
 - `scripts/submit.mjs` — validates every field against the published submission

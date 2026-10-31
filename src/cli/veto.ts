@@ -64,7 +64,7 @@ function printHeader(guard: VetoGuard): void {
   const doc = guard.policyDoc;
   const summary = guard.summary();
   console.log(bold('VETO') + dim(' - the spending firewall for AI agents'));
-  console.log(`${dim('policy')} ${doc.name}  ${dim('hash')} ${guard.policyHash.slice(0, 16)}…`);
+  console.log(`${dim('policy')} ${doc.name}  ${dim('hash')} ${guard.policyHash.slice(0, 16)}...`);
   console.log(`${dim('owner')}  ${doc.owner}   ${dim('agent')} ${doc.agent}`);
   const limits = summary
     .map((entry) => `${entry.asset}: ${entry.perTx ?? '-'}/tx, ${entry.daily?.limit ?? '-'}/day`)
@@ -147,7 +147,7 @@ async function commandDemo(): Promise<number> {
       id: 'demo_swap_bad',
       quote: { ...swap.quote, destinationAddress: ATTACKER_DESTINATION },
     });
-    printDecision(index++, 'same quote, output redirected to 0xdeadbeef…', tampered.decision, 'a swapped destination cannot be smuggled through an otherwise valid quote');
+    printDecision(index++, 'same quote, output redirected to 0xdeadbeef...', tampered.decision, 'a swapped destination cannot be smuggled through an otherwise valid quote');
     clock.t += 7_000;
   }
 
@@ -172,7 +172,7 @@ async function commandDemo(): Promise<number> {
   const verify = guard.verifyAudit();
   console.log('');
   console.log(
-    `${dim('audit chain')} ${verify.records} records, head ${cyan(verify.head.slice(0, 16))}…, ${verify.ok ? green('verified') : red('BROKEN')}`,
+    `${dim('audit chain')} ${verify.records} records, head ${cyan(verify.head.slice(0, 16))}..., ${verify.ok ? green('verified') : red('BROKEN')}`,
   );
   const snapshot = guard.snapshot();
   const tamperedState = structuredClone(snapshot.audit);
@@ -193,14 +193,18 @@ async function commandAttack(): Promise<number> {
   console.log(bold('VETO') + dim(' - attack catalogue'));
   console.log('');
   const rows = await runCatalogue(CATALOGUE);
-  console.log(`${pad('#', 3)} ${pad('attempt', 46)} ${pad('expected', 16)} ${pad('actual', 16)} wall`);
-  console.log(dim('-'.repeat(120)));
+  // Column widths follow the content: "require_approval" must not collide with the
+  // wall column, and a judge should never see a truncated verdict.
+  const wName = Math.max(...rows.map((r) => r.name.length), 'attempt'.length) + 2;
+  const wVerdict = Math.max(...rows.map((r) => r.verdict.length), 'expected'.length, 'actual'.length) + 2;
+  console.log(`${pad('#', 3)} ${pad('attempt', wName)} ${pad('expected', wVerdict)} ${pad('actual', wVerdict)} wall`);
+  console.log(dim('-'.repeat(3 + wName + wVerdict * 2 + 40)));
   let failures = 0;
   rows.forEach((row, i) => {
     if (!row.passed) failures++;
     const mark = row.passed ? green('ok') : red('FAIL');
     console.log(
-      `${pad(String(i + 1), 3)} ${pad(row.name, 46)} ${pad(row.expect, 16)} ${pad(row.verdict, 16)} ${dim(row.wall)} ${mark}`,
+      `${pad(String(i + 1), 3)} ${pad(row.name, wName)} ${pad(row.expect, wVerdict)} ${pad(row.verdict, wVerdict)} ${dim(row.wall)} ${mark}`,
     );
   });
   console.log('');
@@ -278,11 +282,8 @@ async function commandEvaluate(file: string): Promise<number> {
   console.log(JSON.stringify(decision, null, 2));
   // The JSON is the machine-readable output; the summary goes to stderr so a pipe
   // still receives clean JSON.
-  console.error(
-    `\n${verdictChip(decision.verdict)} ${decision.amount} ${decision.asset} ${action.kind} ${
-      decision.reasons.length === 0 ? '' : '[' + decision.reasons.map((r) => r.code).join(', ') + ']'
-    }`,
-  );
+  const codes = [...new Set(decision.reasons.map((r) => r.code))];
+  console.error(`\n${verdictChip(decision.verdict)} ${decision.amount} ${decision.asset} ${action.kind} ${codes.length === 0 ? '' : '[' + codes.join(', ') + ']'}`);
   return decision.verdict === 'deny' ? 1 : 0;
 }
 

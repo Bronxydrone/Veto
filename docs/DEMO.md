@@ -2,6 +2,48 @@
 
 Everything below is reproducible with no wallet, no key and no funds.
 
+## A0. Ready-made assets (no camera, no browser needed)
+
+A **39-second video** and four images are committed and can be attached to the X post
+as they are:
+
+| File | What it shows |
+|---|---|
+| [`shots/preflight.png`](shots/preflight.png) | `npm run preflight`: 16/16 green - the repository is shippable right now |
+| [`shots/mvp.png`](shots/mvp.png) | `npm run mvp`: the whole product on one screen - five decisions and a verified audit chain |
+| [`shots/veto-demo.mp4`](shots/veto-demo.mp4) | 39s, 1600×1000, seven cards: what it is → `demo` → `attack` → testnet → conformance → repo |
+| [`shots/demo.png`](shots/demo.png) | `npm run demo`: allowed payment, approval, three refusals, live 1Click quote, redirected quote refused, human approval, audit verified, tamper detected |
+| [`shots/attack.png`](shots/attack.png) | `npm run attack`: all 29 escape attempts with the wall each one hit |
+| [`shots/testnet.png`](shots/testnet.png) | the recorded testnet run: deploy, policy install, one allowed spend, one reverted overspend, one key-level refusal, on-chain state |
+| [`shots/conformance.png`](shots/conformance.png) | 28/28 conformance checks against the deployed contract, with the deny reason read from the on-chain event |
+
+They are **not** retouched screenshots: they are images of the real stdout,
+rendered by [`scripts/render_terminal.py`](../scripts/render_terminal.py), which
+only strips ANSI codes and colours known tokens. Re-render after any change:
+
+```bash
+node src/cli/veto.ts demo   > docs/artifacts/demo.txt 2>&1
+node src/cli/veto.ts attack > docs/artifacts/attack.txt 2>&1
+node scripts/show-testnet-run.ts --compact > docs/artifacts/testnet-compact.txt
+node scripts/testnet-conformance.ts --compact > docs/artifacts/conformance.txt
+python scripts/render_terminal.py docs/artifacts/demo.txt    docs/shots/demo.png    "npm run demo"
+python scripts/render_terminal.py docs/artifacts/attack.txt  docs/shots/attack.png  "npm run attack"
+python scripts/render_terminal.py docs/artifacts/testnet-compact.txt docs/shots/testnet.png "node scripts/testnet-demo.ts"
+python scripts/render_terminal.py docs/artifacts/conformance.txt docs/shots/conformance.png "node scripts/testnet-conformance.ts"
+```
+
+The video is rebuilt from those images by
+[`scripts/make-demo-video.ps1`](../scripts/make-demo-video.ps1) (needs ffmpeg; it is
+not a project dependency):
+
+```powershell
+$env:FFMPEG = "C:\path\to\ffmpeg.exe"
+pwsh -ExecutionPolicy Bypass -File .\scripts\make-demo-video.ps1
+```
+
+The dashboard still needs a real browser: that is the only screenshot a human has
+to take (section B, items 3 and 4).
+
 ## A. 60-second video (shot list)
 
 Record at 1440×900, terminal at 16pt, dark background. The point of the video is
@@ -21,8 +63,11 @@ If a video is inconvenient, **screenshots are enough** for the submission.
 
 ## B. Screenshots to take
 
-1. `npm run demo` terminal output (full, readable).
-2. `npm run attack` table (29 rows, 26 denied).
+If you attach the three images from A0, only items 3 and 4 are still missing (they
+need a browser):
+
+1. `npm run demo` terminal output (full, readable) — *already rendered: `shots/demo.png`*.
+2. `npm run attack` table (29 rows, 26 denied) — *already rendered: `shots/attack.png`*.
 3. Dashboard — policy panel + budgets + one DENY card expanded to show per-check
    detail (this is the money shot: "which wall, and why").
 4. Dashboard — approval queue with a pending payment and the Approve button.
@@ -33,7 +78,9 @@ If a video is inconvenient, **screenshots are enough** for the submission.
 
 ## C. Post for X
 
-Keep it plain. No thread, no hashtag soup. Attach 3–4 images or the 60s video.
+Keep it plain. No thread, no hashtag soup. Attach the 39-second
+[`shots/veto-demo.mp4`](shots/veto-demo.mp4) — or, if video upload is a hassle, attach
+three of the images from A0 (`demo.png`, `attack.png`, `conformance.png`).
 
 > We built **Veto** at NEAR HACKATHON — a spending firewall for AI agents on NEAR.
 >
@@ -53,7 +100,7 @@ Keep it plain. No thread, no hashtag soup. Attach 3–4 images or the 60s video.
 > chain-signature address, re-derived live from v1.signer.
 >
 > No wallet needed to try it: `npm run demo`, `npm run attack`, `npm run serve`.
-> Repo: <link>
+> Repo: https://github.com/Bronxydrone/veto
 
 Second, shorter variant:
 

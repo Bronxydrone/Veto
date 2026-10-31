@@ -12,3 +12,6 @@ data/*.json
 !data/fixtures/**
 # contains personal data (name, email, links) - never commit it
 submission.json
+__pycache__/
+*.pyc
+docs/shots/video/

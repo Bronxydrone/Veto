@@ -1,0 +1,23 @@
+{
+  "network": "testnet",
+  "token": "wrap.testnet",
+  "contract": "5ac5ef1f12f81b18d16d05b038e9168bc92f5adfbf7a61994fc6345e34929633",
+  "vendor": "f2b01d0594579eea1c7305bd972464583469c0d6d232c1e5e11d578af872c680",
+  "at": "2026-10-19T20:18:41.452Z",
+  "txs": {
+    "setPolicy": "2MTyprAddhADoP4jzd4QUBkUVhSRrzeNmCzT335kaVAS",
+    "spend": "4ZBgTTM6w9sRwdFSGVo8Jvonny9zR2e7LXhnVZvp33aH"
+  },
+  "steps": [
+    "vault holds 1.50 wNEAR",
+    "check(0.60 wNEAR) -> \"deny:PER_TX_LIMIT\"",
+    "check(0.40 wNEAR) -> \"allow\"",
+    "vendor wNEAR 0.00 -> 0.40 (delta 0.40)",
+    "spend(0.60 wNEAR) refused: PER_TX_LIMIT",
+    "  tx 7QrhFBXmwqvhJ54rjLTJAjSpoZfhgUChPCr7ph1vMzbG  https://testnet.nearblocks.io/txns/7QrhFBXmwqvhJ54rjLTJAjSpoZfhgUChPCr7ph1vMzbG",
+    "get_usage(wrap.testnet): day 0.40, month 0.40"
+  ],
+  "ok": true,
+  "refusedReason": "PER_TX_LIMIT",
+  "refusedTx": "7QrhFBXmwqvhJ54rjLTJAjSpoZfhgUChPCr7ph1vMzbG"
+}

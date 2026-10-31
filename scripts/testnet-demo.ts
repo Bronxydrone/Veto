@@ -1,4 +1,4 @@
-﻿/**
+/**
  * On-chain proof on NEAR testnet.
  *
  * Three implicit accounts, all funded by the testnet faucet, each with a job:

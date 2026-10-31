@@ -580,10 +580,23 @@ server.listen(PORT, HOST, () => {
   console.log(`  policy  examples/policy.yaml`);
   console.log(`  hash    ${guard.policyHash}`);
   console.log(`  agent   ${agent}   owner ${owner}`);
+  console.log('');
+  console.log('  two-minute tour:');
+  console.log('   1. "Send to policy" with the prefilled payment   -> a decision card with every check');
+  console.log('   2. set the amount to 26                          -> DENY, per-transaction cap');
+  console.log('   3. toggle "tamper destination" on a swap         -> DENY, destination not pinned');
+  console.log('   4. "Run attack catalogue"                        -> 29 attempts, 26 refused');
+  console.log('   5. "Verify chain"                                -> the hash chain of every decision above');
 });
 
-server.on('error', (err: Error) => {
-  console.error(`[veto] server error: ${err.message}`);
+server.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`[veto] port ${PORT} is already in use.`);
+    console.error('  pick another: PowerShell  $env:PORT=8788; npm run serve');
+    console.error('                cmd         set PORT=8788 && npm run serve');
+  } else {
+    console.error(`[veto] server error: ${err.message}`);
+  }
   process.exitCode = 1;
 });
 
