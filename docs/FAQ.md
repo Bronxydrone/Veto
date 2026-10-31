@@ -2,6 +2,18 @@
 
 Short, direct answers. Where the honest answer is "we do not solve that", it says so.
 
+### Is this the same as a "tool-call policy" library?
+
+No, and the difference is the custody. A tool-call policy library evaluates a function name
+and its arguments inside the agent's process: if the agent (or the process around it) is
+compromised, the check can be skipped. Veto keeps the money in a contract on NEAR that
+recomputes per-tx, daily and 30-day limits from its own storage, and gives the agent a key
+that can only call `spend()`. The off-chain engine adds reasons and USD thresholds; the
+contract is what actually stops the transfer.
+
+That is also why the audit trail is hash-chained and anchored on-chain rather than being a
+local log: the claim "this payment was refused" has to survive the machine that made it.
+
 ### Why not just use a function-call key with an allowance?
 
 Because an allowance is one number. It cannot express "1.5 NEAR per transaction,

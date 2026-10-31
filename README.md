@@ -2,6 +2,10 @@
 
 **A spending firewall for AI agent wallets on NEAR.** Agents can spend; they just cannot spend everything.
 
+It is not a tool-call policy library. Those decide whether an agent may call a function;
+Veto decides whether money may leave a wallet, and enforces that inside a contract that
+holds the funds and recomputes the limits itself.
+
 Built for **NEAR HACKATHON** — tracks `security` and `agents`.
 
 ```
