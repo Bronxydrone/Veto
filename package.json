@@ -14,6 +14,7 @@
     "test": "node --test-isolation=none --test \"test/unit/*.test.ts\"",
     "test:all": "node --test-isolation=none --test \"test/**/*.test.ts\"",
     "mvp": "node src/cli/mvp.ts",
+    "story": "node src/cli/story.ts",
     "demo": "node src/cli/veto.ts demo",
     "attack": "node src/cli/veto.ts attack",
     "quote": "node src/cli/veto.ts quote",

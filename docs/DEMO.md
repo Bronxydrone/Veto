@@ -9,6 +9,7 @@ as they are:
 
 | File | What it shows |
 |---|---|
+| [`shots/story.png`](shots/story.png) | `npm run story`: one agent, one wallet, five beats of a very bad day |
 | [`shots/bug.png`](shots/bug.png) | The bug the network found: budget written, transfer failed, and the fix that refuses before writing |
 | [`shots/preflight.png`](shots/preflight.png) | `npm run preflight`: 16/16 green - the repository is shippable right now |
 | [`shots/mvp.png`](shots/mvp.png) | `npm run mvp`: the whole product on one screen - five decisions and a verified audit chain |

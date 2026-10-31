@@ -139,6 +139,7 @@ run('test suite (85 tests)', process.execPath, ['--test-isolation=none', '--test
 run('attack catalogue', process.execPath, ['src/cli/veto.ts', 'attack']);
 run('narrative demo', process.execPath, ['src/cli/veto.ts', 'demo']);
 run('mvp demo', process.execPath, ['src/cli/mvp.ts']);
+run('use-case story', process.execPath, ['src/cli/story.ts']);
 
 if (offline) {
   add('on-chain conformance', null, 'skipped (--offline)');

@@ -24,6 +24,23 @@ a tamper check that catches an edited audit record.*
 
 ---
 
+### The use case, in forty seconds
+
+A research agent holds 100 USDC and pays for data. A page it fetched tells it to send **40
+USDC** to a vendor: the wallet refuses, the agent reads the reason back and buys the small
+tier instead. A stranger's address in the next request is refused by name. A 20 USDC
+subscription waits for the owner, because the agent cannot approve itself. Then the agent's
+key is stolen - and the attacker can add a key or stake or call anything, and every one of
+those action kinds is denied, so the money is still in the vault.
+
+```
+npm run story
+```
+
+![npm run story](docs/shots/story.png)
+
+Every verdict in that output comes from the real engine and `examples/policy.yaml`.
+
 ## 1. The problem
 
 An agent with a wallet is an account with initiative and no judgment. The two
