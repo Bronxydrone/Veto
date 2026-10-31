@@ -73,6 +73,13 @@ SLIDES = [
         FG,
     ),
     (
+        "6. The network found a bug our tests missed",
+        "budget written, a spend event emitted, then the transfer failed: the contract now refuses before it writes",
+        "npm run chain:conformance",
+        "bug.png",
+        RED,
+    ),
+    (
         "Veto",
         "policy firewall for AI agents · NEAR HACKATHON",
         "github.com/Bronxydrone/veto",

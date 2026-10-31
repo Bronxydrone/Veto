@@ -4,14 +4,15 @@ Everything below is reproducible with no wallet, no key and no funds.
 
 ## A0. Ready-made assets (no camera, no browser needed)
 
-A **39-second video** and four images are committed and can be attached to the X post
+A **44-second video** and four images are committed and can be attached to the X post
 as they are:
 
 | File | What it shows |
 |---|---|
+| [`shots/bug.png`](shots/bug.png) | The bug the network found: budget written, transfer failed, and the fix that refuses before writing |
 | [`shots/preflight.png`](shots/preflight.png) | `npm run preflight`: 16/16 green - the repository is shippable right now |
 | [`shots/mvp.png`](shots/mvp.png) | `npm run mvp`: the whole product on one screen - five decisions and a verified audit chain |
-| [`shots/veto-demo.mp4`](shots/veto-demo.mp4) | 39s, 1600×1000, seven cards: what it is → `demo` → `attack` → testnet → conformance → repo |
+| [`shots/veto-demo.mp4`](shots/veto-demo.mp4) | 44s, 1600×1000, eight cards: what it is → `demo` → `attack` → testnet → conformance → repo |
 | [`shots/demo.png`](shots/demo.png) | `npm run demo`: allowed payment, approval, three refusals, live 1Click quote, redirected quote refused, human approval, audit verified, tamper detected |
 | [`shots/attack.png`](shots/attack.png) | `npm run attack`: all 29 escape attempts with the wall each one hit |
 | [`shots/testnet.png`](shots/testnet.png) | the recorded testnet run: deploy, policy install, one allowed spend, one reverted overspend, one key-level refusal, on-chain state |

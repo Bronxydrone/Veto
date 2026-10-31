@@ -1,0 +1,19 @@
+before the fix - NEAR testnet, vault too poor to cover the transfer
+
+  spend(0.5 NEAR)
+    budget counters      written
+    audit chain          advanced
+    "spend" event        emitted
+    transfer receipt     FAILED  LackBalanceForState
+
+  result: budget burned, money not delivered, and the log said "spend"
+
+why: on NEAR a function call and the receipts it spawns are not atomic,
+     so "the call returned" never meant "the money moved"
+
+after the fix
+
+  check(0.5 NEAR)  ->  "deny:INSUFFICIENT_BALANCE"
+  {"reason":"INSUFFICIENT_BALANCE","available":"248460122278521199999999"}
+
+  nothing is written: no counter, no chain advance, no event

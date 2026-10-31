@@ -108,6 +108,28 @@ Offline? Steps 1–3, 6 and 7 work with no network at all: the 1Click quote is a
 recorded fixture (`data/fixtures/quote.json`), and each step says so when the
 network is missing.
 
+### The bug the chain found, and the tests did not
+
+Every claim above was checked on a real network, and that is how this project's most
+instructive bug surfaced. On testnet, with the vault too poor to cover a transfer, `spend`
+**wrote the budget counters, advanced the audit chain and emitted a `spend` event** — and
+only then did the transfer receipt fail with `LackBalanceForState`. Budget burned, money
+not delivered, and the log claiming the payment went through. No unit test caught it,
+because the mocked context was always funded.
+
+On NEAR a function call and the receipts it spawns are not atomic, so "the call returned"
+never meant "the money moved". The contract now checks `account_balance - storage_cost`
+before touching any state and refuses with `deny:INSUFFICIENT_BALANCE` instead:
+
+```
+$ npm run chain:conformance
+  check(0.5 NEAR) -> "deny:INSUFFICIENT_BALANCE"
+  {"reason":"INSUFFICIENT_BALANCE","available":"248460122278521199999999"}
+```
+
+The whole story, with the failing transaction and the fix, is in
+[`docs/TESTNET.md`](docs/TESTNET.md#the-bug-the-chain-found-and-the-fix-in-the-contract).
+
 ### The policy a human writes
 
 `examples/policy.yaml` is the whole contract, short enough to read in a minute:
@@ -387,8 +409,8 @@ what keeps the policy testable without a chain.
 
 ## 10. Submission artefacts
 
-- [`docs/shots/veto-demo.mp4`](docs/shots/veto-demo.mp4) — a 39-second walkthrough built
-  from the real command output (seven cards: what it is, `demo`, `attack`, testnet,
+- [`docs/shots/veto-demo.mp4`](docs/shots/veto-demo.mp4) — a 44-second walkthrough built
+  from the real command output (eight cards: what it is, `demo`, `attack`, testnet,
   conformance, repo). No screen recording, no editing; every number is stdout.
 - [`docs/DEMO.md`](docs/DEMO.md) — the video shot list, the screenshot list, and the X
   post text.
