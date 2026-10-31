@@ -78,36 +78,53 @@ need a browser):
 
 ## C. Post for X
 
-Keep it plain. No thread, no hashtag soup. Attach the 39-second
-[`shots/veto-demo.mp4`](shots/veto-demo.mp4) — or, if video upload is a hassle, attach
-three of the images from A0 (`demo.png`, `attack.png`, `conformance.png`).
+X counts every link as 23 characters regardless of length, so the numbers below have
+room. Send the single post if the account has no Premium; otherwise the thread.
 
-> We built **Veto** at NEAR HACKATHON — a spending firewall for AI agents on NEAR.
->
-> Agents get a wallet and either a key (one prompt injection drains everything) or a
-> human on every payment (not an agent any more). Veto is the third option: the owner
-> writes a policy — per-tx, daily and monthly caps, allow lists, approval thresholds,
-> slippage and destination pins — the policy is pinned by hash, and it is enforced
-> on-chain by a Rust contract the agent's key cannot rewrite.
->
-> Every action is judged before money moves, and every decision — including the
-> refusals — goes into a hash-chained audit log whose head is anchored on-chain.
-> 29 escape attempts are tested and refused: 26 denied, 1 escalated to a human,
-> 2 legitimate payments allowed.
->
-> Real NEAR Intents quotes are validated before a swap (venue, slippage, expiry,
-> pinned destination). The pinned address is the agent's own MPC-derived
-> chain-signature address, re-derived live from v1.signer.
->
-> No wallet needed to try it: `npm run demo`, `npm run attack`, `npm run serve`.
-> Repo: https://github.com/Bronxydrone/veto
+**Single post (301 characters with the link counted as 23 - it fits):**
 
-Second, shorter variant:
+```
+Built at NEAR HACKATHON: Veto, a spending firewall for AI agents on NEAR.
 
-> AI agents with wallets need a firewall, not a prayer. We built **Veto** at NEAR
-> HACKATHON: policy-as-data for agent spending, enforced on-chain, re-checked at
-> approval time, with a hash-chained audit trail. 29 escape attempts tested, 26
-> refused. Live NEAR Intents quotes validated. Demo and repo in the reply.
+Policy as data, enforced by a Rust contract whose agent key can only call spend().
+29 escape attempts tested, 26 refused, every refusal carries a reason code.
+
+https://github.com/Bronxydrone/Veto
+```
+
+**Thread (eight posts, each under 280):**
+
+```
+1/ We built Veto at NEAR HACKATHON: a spending firewall for AI agents on NEAR.
+
+2/ An agent with a wallet dies two ways: it gets a key and one prompt injection drains
+everything, or a human approves every payment and it is not an agent any more.
+Veto is the third option.
+
+3/ The owner writes a policy: per-tx, daily and monthly caps, allow/deny lists, an
+approval threshold, velocity, swap venue/slippage/destination pins, expiry, pause. The
+policy is pinned by hash everywhere it is used.
+
+4/ It is enforced on-chain by a Rust contract. The agent's key can only call spend(); a
+stolen key cannot add keys, withdraw or pause. Limits are recomputed from the contract's
+own storage.
+
+5/ Every decision, including refusals, goes into a hash-chained audit log. A refused
+spend reverts AND emits a deny event with the reason code, so the agent can read why it
+was stopped.
+
+6/ Real NEAR Intents quotes are validated before a swap: venue, slippage, expiry, and a
+destination pinned to the agent's MPC-derived chain-signature address.
+
+7/ 29 adversarial escape attempts: 26 refused, 1 escalated to a human, 2 legitimate
+payments allowed. 85 tests, 28/28 conformance checks against the deployed contract. No
+wallet needed to reproduce.
+
+8/ Repo: https://github.com/Bronxydrone/Veto
+```
+
+Attach the video from A0 (or three of the images). The post must say it was built at
+NEAR HACKATHON - both drafts do.
 
 ## D. One-liner for the submission form
 
