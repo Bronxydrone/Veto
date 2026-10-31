@@ -1,6 +1,6 @@
 # Veto
 
-[![ci](https://github.com/Bronxydrone/Veto/actions/workflows/ci.yml/badge.svg)](https://github.com/Bronxydrone/Veto/actions/workflows/ci.yml)  [![tests](https://img.shields.io/badge/tests-85%20js%20%C2%B7%2031%20rust-brightgreen)](https://github.com/Bronxydrone/Veto#2-try-it-in-five-minutes)
+[![ci](https://github.com/Bronxydrone/Veto/actions/workflows/ci.yml/badge.svg)](https://github.com/Bronxydrone/Veto/actions/workflows/ci.yml)  [![tests](https://img.shields.io/badge/tests-87%20js%20%C2%B7%2031%20rust-brightgreen)](https://github.com/Bronxydrone/Veto#2-try-it-in-five-minutes)
 
 **A spending firewall for AI agent wallets on NEAR.** Agents can spend; they just cannot spend everything.
 
@@ -88,7 +88,7 @@ Each step is "do this, see that". Nothing here needs a wallet, a key or funds.
 | # | Do this | See that |
 |---|---|---|
 | 0 | `npm run mvp` | The whole product on one screen, in ten seconds and with no network: one payment allowed, one over the per-tx cap refused, one stranger refused, one key change refused, one payment escalated to the owner and executed after the agent is told it cannot approve itself. Nine audit records, chain verified. |
-| 1 | `npm run test:all` | `# pass 85`, `# fail 0` — engine, policy, ledger, audit, approvals, chain signatures, plus the adversarial suite where every verdict is asserted. |
+| 1 | `npm run test:all` | `# pass 87`, `# fail 0` — engine, policy, ledger, audit, approvals, chain signatures, plus the adversarial suite where every verdict is asserted. |
 | 2 | `npm run demo` | The numbered narrative above: 12 decisions, one approval flow (including the agent being refused permission to approve its own payment), one real NEAR Intents quote, `audit chain verified`, and a tamper check that *detects* an edited record. |
 | 3 | `npm run attack` | A 29-row table ending in `29 attempts: 26 denied, 1 to a human, 2 allowed`. Every row names the wall it hit. Exit code 1 if any row disagrees with its claim. |
 | 4 | `npm run quote` | Fetches a **live** quote from `https://1click.chaindefuser.com/v0/quote` (1 NEAR → USDC on Arbitrum), then prints all ~19 policy checks with `pass`/`FAIL`. Add an address to see the same live quote refused: `npm run quote 0xdeadbeef00000000000000000000000000000000`. |
@@ -106,7 +106,7 @@ Step 6 has a face. These are screenshots of the dashboard actually running, not 
 | A refused payment | The approval queue |
 |---|---|
 | ![A refused payment with all 19 checks listed](docs/shots/dashboard.png) | ![Two payments waiting for a human](docs/shots/approvals.png) |
-| 26 USDC against a 25 USDC per-tx cap: `PER_TX_LIMIT`, `APPROVAL_REQUIRED`, `RISK_ESCALATION`, and **every check spelled out** with the number it used — "26 USDC exceeds the 25 USDC per-tx limit", "26 of 100 USDC remaining today". | Requests above $10 hold their budget and wait for a person: `2 waiting`, two cards with the amount, the destination, the deadline and `as alice.near`. The line at the bottom is a request the owner already rejected. |
+| 26 USDC against a 25 USDC per-tx cap: `PER_TX_LIMIT`, `APPROVAL_REQUIRED`, a risk escalation, and **every check spelled out** with the number it used — "26 USDC exceeds the 25 USDC per-tx limit", "26 of 100 USDC remaining today". | Requests above $10 hold their budget and wait for a person: `2 waiting`, two cards with the amount, the destination, the deadline and `as alice.near`. The line at the bottom is a request the owner already rejected. |
 
 Before publishing anything, `npm run preflight` answers one question — *is this
 repository shippable right now?* It checks the static facts (policy compiles, assets exist,
@@ -359,7 +359,7 @@ src/cli/           veto demo | attack | quote | chainsig | evaluate | audit
 src/app/           dependency-free HTTP server + dashboard (no build step)
 examples/          the policy a human writes + three example actions
 contract/          Rust policy vault (near-sdk 5.29), owner/agent separation, 31 tests
-test/unit/         85 tests: money, YAML, policy, engine, toolbox, chain signatures
+test/unit/         87 tests: money, YAML, policy, engine, toolbox, chain signatures
 test/adversarial/  catalogue assertions + stateful attacks
 scripts/           testnet accounts/demo, submission validator, terminal-image renderer
 docs/              threat model, testnet evidence, demo script, submission checklist

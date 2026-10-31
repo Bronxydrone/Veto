@@ -53,7 +53,8 @@ export const REASON = {
   APPROVAL_REQUIRED: 'APPROVAL_REQUIRED',
   APPROVAL_UNAVAILABLE: 'APPROVAL_UNAVAILABLE',
   UNPRICED_ASSET: 'UNPRICED_ASSET',
-  RISK_ESCALATION: 'RISK_ESCALATION',
+  RISK_BUDGET_SHARE: 'RISK_BUDGET_SHARE',
+  RISK_NEW_COUNTERPARTY: 'RISK_NEW_COUNTERPARTY',
 } as const;
 
 export type ReasonCode = (typeof REASON)[keyof typeof REASON];
@@ -610,7 +611,7 @@ export function evaluate(
         passed: false,
         severity: 'approval',
         detail: `this action is ${Math.round(fraction * 100)}% of the daily budget, above the ${Math.round(policy.risk.escalateAboveBudgetFraction * 100)}% escalation threshold`,
-      }, REASON.RISK_ESCALATION);
+      }, REASON.RISK_BUDGET_SHARE);
     }
   }
 
@@ -621,7 +622,7 @@ export function evaluate(
       passed: false,
       severity: 'approval',
       detail: 'the policy escalates every first payment to a new recipient',
-    }, REASON.RISK_ESCALATION);
+    }, REASON.RISK_NEW_COUNTERPARTY);
   }
 
   // ---- 10. verdict -----------------------------------------------------------

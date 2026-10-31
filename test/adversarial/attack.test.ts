@@ -41,6 +41,44 @@ test('the catalogue is big enough to be a claim, not a demo', () => {
   assert.ok(CATALOGUE.some((s) => s.expect === 'require_approval'));
 });
 
+test('no decision reports the same reason code twice', async () => {
+  // Two different escalations once shared one code, so a refusal could read
+  // "RISK_ESCALATION, RISK_ESCALATION" in the CLI and in the dashboard.
+  const offenders: string[] = [];
+  for (const [index, entry] of CATALOGUE.entries()) {
+    const result = await runScenario(entry, index);
+    const seen = new Set<string>();
+    const repeated = result.codes.filter((code) => {
+      if (seen.has(code)) return true;
+      seen.add(code);
+      return false;
+    });
+    if (repeated.length > 0) offenders.push(`${entry.name}: ${repeated.join(', ')}`);
+  }
+  assert.deepEqual(offenders, []);
+});
+
+test('two different escalations carry two different codes', async () => {
+  // A payment that is both 100% of the daily budget and the first to a new recipient.
+  const tight = policyText((doc) => {
+    doc.limits.daily.USDC = 5;
+  });
+  const guard = VetoGuard.create({ policyText: tight, clock: () => START, prices: PRICES });
+  const { decision } = await guard.submit({
+    id: 'two_escalations',
+    kind: 'ft.transfer',
+    actor: 'argo.near',
+    asset: 'USDC',
+    amount: '5',
+    to: 'compute.near',
+  });
+  const codes = decision.reasons.map((r) => r.code);
+  assert.equal(decision.verdict, 'require_approval');
+  assert.ok(codes.includes('RISK_BUDGET_SHARE'), `expected RISK_BUDGET_SHARE in [${codes.join(', ')}]`);
+  assert.ok(codes.includes('RISK_NEW_COUNTERPARTY'), `expected RISK_NEW_COUNTERPARTY in [${codes.join(', ')}]`);
+  assert.equal(new Set(codes).size, codes.length, `duplicate codes: ${codes.join(', ')}`);
+});
+
 test('attack catalogue: every attempt hits the expected wall', async (t) => {
   for (const [index, entry] of CATALOGUE.entries()) {
     await t.test(entry.name, async () => {
