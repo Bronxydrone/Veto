@@ -82,6 +82,13 @@ Each step is "do this, see that". Nothing here needs a wallet, a key or funds.
 | 11 | `npm run chain:ft` | The **NEP-141 path**, on chain, with wNEAR: wrap NEAR into the vault, install a policy with both a `near` and a `wrap.testnet` limit, let the agent spend 0.40 wNEAR (the vendor's token balance really changes), then watch 0.60 wNEAR get reverted with `PER_TX_LIMIT`. |
 | 12 | `npm run chain:rotate` | Rotates the agent account: a fresh faucet-funded account gets a `spend`-only key, deletes its full-access key, and the owner points the contract at it with `set_agent`. This is also the compromise response, and it is what unblocked the demo when the old key's allowance ran out. |
 
+Step 6 has a face. These are screenshots of the dashboard actually running, not mockups:
+
+| A refused payment | The approval queue |
+|---|---|
+| ![A refused payment with all 19 checks listed](docs/shots/dashboard.png) | ![Two payments waiting for a human](docs/shots/approvals.png) |
+| 26 USDC against a 25 USDC per-tx cap: `PER_TX_LIMIT`, `APPROVAL_REQUIRED`, `RISK_ESCALATION`, and **every check spelled out** with the number it used — "26 USDC exceeds the 25 USDC per-tx limit", "26 of 100 USDC remaining today". | Requests above $10 hold their budget and wait for a person: `2 waiting`, two cards with the amount, the destination, the deadline and `as alice.near`. The line at the bottom is a request the owner already rejected. |
+
 Before publishing anything, `npm run preflight` answers one question — *is this
 repository shippable right now?* It checks the static facts (policy compiles, assets exist,
 the wasm matches the size and hash quoted here, every relative link resolves, the
@@ -315,7 +322,7 @@ test/unit/         85 tests: money, YAML, policy, engine, toolbox, chain signatu
 test/adversarial/  catalogue assertions + stateful attacks
 scripts/           testnet accounts/demo, submission validator, terminal-image renderer
 docs/              threat model, testnet evidence, demo script, submission checklist
-docs/shots/        demo, attack and testnet images rendered from real command output
+docs/shots/        demo, attack, testnet, preflight and dashboard images rendered from real output
 data/fixtures/     one recorded live 1Click quote (offline reproducibility)
 ```
 

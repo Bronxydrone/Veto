@@ -705,11 +705,14 @@
         font-weight: 650;
       }
 
-      #feed {
+            #feed {
         display: grid;
         gap: 8px;
-        max-height: 430px;
-        overflow-y: auto;
+        /* No inner scroll box: an opened refusal is 19 rows tall, and clipping it to a
+           fixed height made reading it a scroll-inside-a-scroll exercise. The page
+           scrolls instead, which also makes a full-page screenshot capture everything. */
+        max-height: none;
+        overflow: visible;
         padding-right: 4px;
       }
 
@@ -1392,6 +1395,10 @@
         refreshing: false,
       };
 
+      // Decision ids whose check list the reader has opened. The feed is re-rendered on
+      // every refresh, so this is what keeps an opened refusal open.
+      const openChecks = new Set();
+
       /* ------------------------------------------------------------ utils */
 
       function amountText(value) {
@@ -1617,7 +1624,7 @@
           ${codes ? `<div class="d-codes">${codes}</div>` : ""}
           ${
             checks.length
-              ? `<details class="checks"><summary>${WHOLE.format(checks.length)} checks · ${WHOLE.format(failed)} failed</summary><ul>${checks
+              ? `<details class="checks" data-for="${esc(decision.decisionId)}" ${openChecks.has(decision.decisionId) ? "open" : ""}><summary>${WHOLE.format(checks.length)} checks · ${WHOLE.format(failed)} failed</summary><ul>${checks
                   .map(renderCheck)
                   .join("")}</ul></details>`
               : ""
@@ -1633,6 +1640,15 @@
           return;
         }
         feed.innerHTML = view.feed.map(renderDecision).join("");
+        // The page refreshes every few seconds, which replaces the markup. Keep the
+        // check lists the reader opened open, so reading a refusal is not a race.
+        feed.querySelectorAll("details.checks").forEach((node) => {
+          const id = node.dataset.for;
+          node.addEventListener("toggle", () => {
+            if (node.open) openChecks.add(id);
+            else openChecks.delete(id);
+          });
+        });
       }
 
       function mergeRecent(list) {
