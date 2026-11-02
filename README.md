@@ -8,6 +8,24 @@ It is not a tool-call policy library. Those decide whether an agent may call a f
 Veto decides whether money may leave a wallet, and enforces that inside a contract that
 holds the funds and recomputes the limits itself.
 
+**In one paragraph:** the money lives in a contract, not in the agent. The agent's key can
+only ask that contract to `spend()`, and the contract recomputes per-transaction, daily and
+30-day limits from its own storage on every call. A refusal reverts the transaction *and*
+emits a NEP-297 `deny` event carrying the reason code, so the agent can read why it was
+stopped. Anything above the owner's threshold waits for a human, and that approval is
+re-checked against today's policy, so a stale one cannot be spent.
+
+**Proven on NEAR testnet, not in a slide:** 28 conformance checks against the deployed
+contract (deny reasons read back from the on-chain events), 29 adversarial scenarios with
+asserted verdicts, 1000 random actions checked against the invariants, and 31 contract tests
+on a real NEAR VM. Nothing to install, nothing to trust:
+
+```bash
+npm run story     # the use case in five beats, 40 seconds, offline
+npm run attack    # 29 ways out of the walls, every verdict asserted
+npm run test:all  # 94 tests, 0 failures, no dependencies
+```
+
 Built for **NEAR HACKATHON** — tracks `security` and `agents`.
 
 ```
