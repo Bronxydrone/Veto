@@ -1,6 +1,6 @@
 # Veto
 
-[![ci](https://github.com/Bronxydrone/Veto/actions/workflows/ci.yml/badge.svg)](https://github.com/Bronxydrone/Veto/actions/workflows/ci.yml)  [![tests](https://img.shields.io/badge/tests-87%20js%20%C2%B7%2031%20rust-brightgreen)](https://github.com/Bronxydrone/Veto#2-try-it-in-five-minutes)
+[![ci](https://github.com/Bronxydrone/Veto/actions/workflows/ci.yml/badge.svg)](https://github.com/Bronxydrone/Veto/actions/workflows/ci.yml)  [![tests](https://img.shields.io/badge/tests-89%20js%20%C2%B7%2031%20rust-brightgreen)](https://github.com/Bronxydrone/Veto#2-try-it-in-five-minutes)
 
 **A spending firewall for AI agent wallets on NEAR.** Agents can spend; they just cannot spend everything.
 
@@ -76,7 +76,52 @@ That is the real output of `npm run demo`, condensed.
 
 ---
 
-## 2. Try it in five minutes
+## 2. What is actually different here
+
+Agent wallets are a crowded space this month, and most of them are the same shape: a
+policy check inside the agent's process, right before it signs. That is useful, and it has
+one failure mode worth naming - if the process is compromised, the check goes with it.
+
+Veto moves the three things that usually live in the agent out of it:
+
+| | a check before signing | Veto |
+|---|---|---|
+| Where the money is | the agent's wallet | a contract; the agent holds a `spend`-only function-call key |
+| Where the limits are recomputed | the agent's process | the contract's own storage, on every call |
+| What a refusal produces | an exception the agent may swallow | a reverted transaction **and** a NEP-297 `deny` event carrying the reason code |
+| How approval works | a flag in memory | a queued request that re-runs the policy at execution time, so a stale approval cannot be spent |
+| Where the audit lives | a local log file | a hash chain whose head is anchored on-chain, so an edited record is detectable later |
+
+The off-chain engine is still there, and it is what makes refusals explainable: ~20 checks,
+each with the number it used (`26 USDC exceeds the 25 USDC per-tx limit`), deny-by-default,
+and reserved budget for pending approvals so two approvals cannot both fit.
+
+Claims are cheap, so every line above is checked by something you can run:
+
+- **28 conformance checks** against the deployed contract, with deny reasons read back from
+  the on-chain events (`npm run chain:conformance`);
+- **29 adversarial scenarios** with asserted verdicts (`npm run attack`);
+- **1000 random actions** against the invariants: no spending past the daily cap, no
+  payment to a stranger, no state change on a denial, no replay (`npm run test:all`);
+- **31 contract tests** on a real NEAR VM, in CI.
+
+### How fast is one decision
+
+The engine runs on every payment, so it has to be cheap. Twenty thousand decisions per
+shape, after a warmup, on the machine this was written on (Node 24):
+
+```
+shape                                       p50       p95       p99       max
+ft.transfer (USDC, allow-listed vendor)     12.50 µs  17.90 µs  41.40 µs 553.10 µs
+ft.transfer (USDC, over the per-tx cap)     12.60 µs  15.50 µs  26.60 µs 531.70 µs
+native transfer (NEAR, stranger)            19.00 µs  27.80 µs  43.30 µs 904.20 µs
+denied action kind (key.add)                18.20 µs  23.10 µs  38.40 µs 625.90 µs
+```
+
+`npm run bench` reproduces it. The max column includes garbage collection: it is a spike,
+not the steady state.
+
+## 3. Try it in five minutes
 
 Requirements: **Node.js >= 22.6**. The project uses native TypeScript execution, so
 there is no build step and **nothing to install** for steps 1–7 (the only npm
@@ -88,18 +133,19 @@ Each step is "do this, see that". Nothing here needs a wallet, a key or funds.
 | # | Do this | See that |
 |---|---|---|
 | 0 | `npm run mvp` | The whole product on one screen, in ten seconds and with no network: one payment allowed, one over the per-tx cap refused, one stranger refused, one key change refused, one payment escalated to the owner and executed after the agent is told it cannot approve itself. Nine audit records, chain verified. |
-| 1 | `npm run test:all` | `# pass 87`, `# fail 0` — engine, policy, ledger, audit, approvals, chain signatures, plus the adversarial suite where every verdict is asserted. |
+| 1 | `npm run test:all` | `# pass 89`, `# fail 0` — engine, policy, ledger, audit, approvals, chain signatures, plus the adversarial suite where every verdict is asserted. |
 | 2 | `npm run demo` | The numbered narrative above: 12 decisions, one approval flow (including the agent being refused permission to approve its own payment), one real NEAR Intents quote, `audit chain verified`, and a tamper check that *detects* an edited record. |
 | 3 | `npm run attack` | A 29-row table ending in `29 attempts: 26 denied, 1 to a human, 2 allowed`. Every row names the wall it hit. Exit code 1 if any row disagrees with its claim. |
 | 4 | `npm run quote` | Fetches a **live** quote from `https://1click.chaindefuser.com/v0/quote` (1 NEAR → USDC on Arbitrum), then prints all ~19 policy checks with `pass`/`FAIL`. Add an address to see the same live quote refused: `npm run quote 0xdeadbeef00000000000000000000000000000000`. |
 | 5 | `npm run chainsig` | Derives the agent's cross-chain address from NEAR's MPC signer and prints `match: the only address this agent may receive swaps on is the one the MPC derives for it`. |
 | 6 | `npm run serve` | Dashboard on <http://127.0.0.1:8787>: policy, live budgets, decision feed with per-check detail, approval queue, 29-scenario attack simulator, audit-chain verifier. |
 | 7 | `npm run audit` | `{ "ok": true, "records": …, "head": "…" }` — the audit chain of the last dashboard/CLI process. |
-| 8 | `npm run chain:demo` | Deploys the contract to **NEAR testnet** and runs the calls in §4: agent spends inside the limits (succeeds), agent tries 1.5× the cap (reverted, with a readable `deny` event), agent tries to pause the contract (refused by its key). Needs network and faucet-funded testnet accounts; already-run evidence with explorer links is in [`docs/TESTNET.md`](docs/TESTNET.md). |
+| 8 | `npm run chain:demo` | Deploys the contract to **NEAR testnet** and runs the calls in §5: agent spends inside the limits (succeeds), agent tries 1.5× the cap (reverted, with a readable `deny` event), agent tries to pause the contract (refused by its key). Needs network and faucet-funded testnet accounts; already-run evidence with explorer links is in [`docs/TESTNET.md`](docs/TESTNET.md). |
 | 9 | `npm run chain:daily` | Fills the rolling daily budget on testnet, then tries to exceed it: the contract reverts with `DAILY_LIMIT` and the script **reads the reason back from the failed receipt's `deny` event**. |
 | 10 | `npm run chain:conformance` | **28/28 checks against the deployed contract**: owner/agent/allow-list/policy-hash on chain, four NEAR and two wNEAR `check` answers, six refused spends with their exact reason codes, three owner-only calls refused by the agent key, one agent-only call refused for the owner, and the vendor's wNEAR balance. Moves no funds, changes no state. |
 | 11 | `npm run chain:ft` | The **NEP-141 path**, on chain, with wNEAR: wrap NEAR into the vault, install a policy with both a `near` and a `wrap.testnet` limit, let the agent spend 0.40 wNEAR (the vendor's token balance really changes), then watch 0.60 wNEAR get reverted with `PER_TX_LIMIT`. |
 | 12 | `npm run chain:rotate` | Rotates the agent account: a fresh faucet-funded account gets a `spend`-only key, deletes its full-access key, and the owner points the contract at it with `set_agent`. This is also the compromise response, and it is what unblocked the demo when the old key's allowance ran out. |
+| 13 | `npm run bench` | Twenty thousand decisions per shape with p50/p95/p99 latency, printed as microseconds. No network, no deps. |
 
 Step 6 has a face. These are screenshots of the dashboard actually running, not mockups:
 
@@ -177,7 +223,7 @@ intents:
 
 ---
 
-## 3. How enforcement works: three independent layers
+## 4. How enforcement works: three independent layers
 
 A reviewer should be able to break any one layer in their head and still not get
 unplanned money out.
@@ -245,7 +291,7 @@ recomputed.
 
 ---
 
-## 4. NEAR-specific pieces: what is real, what is not
+## 5. NEAR-specific pieces: what is real, what is not
 
 | NEAR feature | How Veto uses it | Status |
 |---|---|---|
@@ -291,7 +337,7 @@ trusted from the script.*
 
 ---
 
-## 5. The attack catalogue
+## 6. The attack catalogue
 
 `src/demo/scenarios.ts` is the single source of truth: the CLI, the dashboard's
 attack simulator and the adversarial tests all read the same 29 scenarios. A
@@ -322,7 +368,7 @@ a denial rather than an allow.
 
 ---
 
-## 6. Design decisions worth defending
+## 7. Design decisions worth defending
 
 1. **The evaluator is pure and has no clock of its own.** Time is injected, which is
    how a test can prove a daily window is a day. (It caught a real bug: the daily
@@ -346,7 +392,7 @@ a denial rather than an allow.
 
 ---
 
-## 7. Repository layout
+## 8. Repository layout
 
 ```
 src/core/          money, policy DSL, ledger, audit, the pure engine, the stateful guard
@@ -359,7 +405,7 @@ src/cli/           veto demo | attack | quote | chainsig | evaluate | audit
 src/app/           dependency-free HTTP server + dashboard (no build step)
 examples/          the policy a human writes + three example actions
 contract/          Rust policy vault (near-sdk 5.29), owner/agent separation, 31 tests
-test/unit/         87 tests: money, YAML, policy, engine, toolbox, chain signatures
+test/unit/         89 tests: money, YAML, policy, engine, toolbox, chain signatures
 test/adversarial/  catalogue assertions + stateful attacks
 scripts/           testnet accounts/demo, submission validator, terminal-image renderer
 docs/              threat model, testnet evidence, demo script, submission checklist
@@ -369,7 +415,7 @@ data/fixtures/     one recorded live 1Click quote (offline reproducibility)
 
 ---
 
-## 8. The contract
+## 9. The contract
 
 ```bash
 cd contract
@@ -389,7 +435,7 @@ and neither does anything else in this repository.
 Because the build machine for this submission had no C compiler, the contract is
 verified **on the chain instead of in a mock**: `npm run chain:conformance` asserts
 28 promises against the deployed instance, including the exact reason code of every
-refusal, read from the on-chain `deny` event (§4). That is a stronger check than the
+refusal, read from the on-chain `deny` event (§5). That is a stronger check than the
 mock harness in one respect — it runs on real storage, in a real VM — and a weaker one
 in another: it cannot fake a 30-day clock rollover, which is what the unit tests cover.
 The unit suite is committed and runs on any machine with a C toolchain via
@@ -404,7 +450,7 @@ and prints every transaction before continuing.
 
 ---
 
-## 9. Wiring it into an agent
+## 10. Wiring it into an agent
 
 `src/integrations/toolbox.ts` is a framework-free choke point for "the agent pays for
 a tool":
@@ -424,7 +470,7 @@ what keeps the policy testable without a chain.
 
 ---
 
-## 10. Submission artefacts
+## 11. Submission artefacts
 
 - [`docs/shots/veto-demo.mp4`](docs/shots/veto-demo.mp4) — a 44-second walkthrough built
   from the real command output (eight cards: what it is, `demo`, `attack`, testnet,
@@ -439,6 +485,6 @@ what keeps the policy testable without a chain.
 
 ---
 
-## 11. Licence
+## 12. Licence
 
 MIT. Built at NEAR HACKATHON, November 2026.

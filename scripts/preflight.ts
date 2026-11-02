@@ -135,7 +135,7 @@ try {
 add('secrets are gitignored', read('.gitignore').includes('data/*.json'), 'data/*.json ignored, fixtures excepted');
 
 // --------------------------------------------------------------- dynamic ----
-run('test suite (87 tests)', process.execPath, ['--test-isolation=none', '--test', 'test/**/*.test.ts']);
+run('test suite (89 tests)', process.execPath, ['--test-isolation=none', '--test', 'test/**/*.test.ts']);
 run('attack catalogue', process.execPath, ['src/cli/veto.ts', 'attack']);
 run('narrative demo', process.execPath, ['src/cli/veto.ts', 'demo']);
 run('mvp demo', process.execPath, ['src/cli/mvp.ts']);
