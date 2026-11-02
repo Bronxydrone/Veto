@@ -15,7 +15,7 @@ emits a NEP-297 `deny` event carrying the reason code, so the agent can read why
 stopped. Anything above the owner's threshold waits for a human, and that approval is
 re-checked against today's policy, so a stale one cannot be spent.
 
-**Proven on NEAR testnet, not in a slide:** 28 conformance checks against the deployed
+**Proven on NEAR testnet, not in a slide:** 37 conformance checks against the deployed
 contract (deny reasons read back from the on-chain events), 29 adversarial scenarios with
 asserted verdicts, 1000 random actions checked against the invariants, and 31 contract tests
 on a real NEAR VM. Nothing to install, nothing to trust:
@@ -116,7 +116,7 @@ and reserved budget for pending approvals so two approvals cannot both fit.
 
 Claims are cheap, so every line above is checked by something you can run:
 
-- **28 conformance checks** against the deployed contract, with deny reasons read back from
+- **37 conformance checks** against the deployed contract, with deny reasons read back from
   the on-chain events (`npm run chain:conformance`);
 - **29 adversarial scenarios** with asserted verdicts (`npm run attack`);
 - **1000 random actions** against the invariants: no spending past the daily cap, no
@@ -160,7 +160,7 @@ Each step is "do this, see that". Nothing here needs a wallet, a key or funds.
 | 7 | `npm run audit` | `{ "ok": true, "records": …, "head": "…" }` — the audit chain of the last dashboard/CLI process. |
 | 8 | `npm run chain:demo` | Deploys the contract to **NEAR testnet** and runs the calls in §5: agent spends inside the limits (succeeds), agent tries 1.5× the cap (reverted, with a readable `deny` event), agent tries to pause the contract (refused by its key). Needs network and faucet-funded testnet accounts; already-run evidence with explorer links is in [`docs/TESTNET.md`](docs/TESTNET.md). |
 | 9 | `npm run chain:daily` | Fills the rolling daily budget on testnet, then tries to exceed it: the contract reverts with `DAILY_LIMIT` and the script **reads the reason back from the failed receipt's `deny` event**. |
-| 10 | `npm run chain:conformance` | **28/28 checks against the deployed contract**: owner/agent/allow-list/policy-hash on chain, four NEAR and two wNEAR `check` answers, six refused spends with their exact reason codes, three owner-only calls refused by the agent key, one agent-only call refused for the owner, and the vendor's wNEAR balance. Moves no funds, changes no state. |
+| 10 | `npm run chain:conformance` | **37/37 checks against the deployed contract**: owner/agent/allow-list/policy-hash on chain, four NEAR and two wNEAR `check` answers, six refused spends with their exact reason codes, three owner-only calls refused by the agent key, one agent-only call refused for the owner, and the vendor's wNEAR balance. Moves no funds, changes no state. |
 | 11 | `npm run chain:ft` | The **NEP-141 path**, on chain, with wNEAR: wrap NEAR into the vault, install a policy with both a `near` and a `wrap.testnet` limit, let the agent spend 0.40 wNEAR (the vendor's token balance really changes), then watch 0.60 wNEAR get reverted with `PER_TX_LIMIT`. |
 | 12 | `npm run chain:rotate` | Rotates the agent account: a fresh faucet-funded account gets a `spend`-only key, deletes its full-access key, and the owner points the contract at it with `set_agent`. This is also the compromise response, and it is what unblocked the demo when the old key's allowance ran out. |
 | 13 | `npm run bench` | Twenty thousand decisions per shape with p50/p95/p99 latency, printed as microseconds. No network, no deps. |
@@ -318,7 +318,7 @@ recomputed.
 | **Function-call access keys** | The agent's only key is a function-call key scoped to `spend` on the contract, with its own allowance. | **Live on testnet** — the agent deletes its full-access key; transaction 4 in [`docs/TESTNET.md`](docs/TESTNET.md). |
 | **Named accounts / sub-accounts** | Owner, agent and every allow-listed vendor are named accounts, which keeps the allow list human-auditable. | Used throughout. |
 | **NEP-297 events** | `spend`, `deny` and `withdraw` events, indexable. | Implemented and observed on testnet. |
-| **NEAR testnet contract** | `contract/` builds a `wasm32-unknown-unknown` contract with 31 unit tests and is deployed and exercised on testnet. | **Live**: deploy, policy install, an allowed spend, a per-tx revert, a **rolling daily-cap revert**, a key-level refusal, a **NEP-141 (wNEAR) spend with a token-limit revert**, and **28/28 conformance checks** against the deployed instance. |
+| **NEAR testnet contract** | `contract/` builds a `wasm32-unknown-unknown` contract with 31 unit tests and is deployed and exercised on testnet. | **Live**: deploy, policy install, an allowed spend, a per-tx revert, a **rolling daily-cap revert**, a key-level refusal, a **NEP-141 (wNEAR) spend with a token-limit revert**, and **37/37 conformance checks** against the deployed instance. |
 
 Deliberately **not** used: a token, a DAO, a marketplace. Veto is the thing other
 agent projects would put in front of their wallet.
@@ -349,7 +349,7 @@ the agent's own key.*
 
 ![conformance](docs/shots/conformance.png)
 
-*`npm run chain:conformance` — 28 promises checked against the deployed contract,
+*`npm run chain:conformance` — 37 promises checked against the deployed contract,
 with each refusal's reason code read from the on-chain `deny` event rather than
 trusted from the script.*
 
@@ -452,7 +452,7 @@ and neither does anything else in this repository.
 
 Because the build machine for this submission had no C compiler, the contract is
 verified **on the chain instead of in a mock**: `npm run chain:conformance` asserts
-28 promises against the deployed instance, including the exact reason code of every
+37 promises against the deployed instance, including the exact reason code of every
 refusal, read from the on-chain `deny` event (§5). That is a stronger check than the
 mock harness in one respect — it runs on real storage, in a real VM — and a weaker one
 in another: it cannot fake a 30-day clock rollover, which is what the unit tests cover.

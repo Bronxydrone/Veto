@@ -15,6 +15,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { Account, JsonRpcProvider, KeyPair, KeyPairSigner, actions } from 'near-api-js';
+import { createHash } from 'node:crypto';
 import { hashObject } from '../src/core/canonical.ts';
 
 const RPC = 'https://rpc.testnet.fastnear.com';
@@ -153,6 +154,71 @@ await expectRejected('spend: stranger', agent, 'spend', { asset_id: 'near', amou
 await expectRejected('spend: unknown asset', agent, 'spend', { asset_id: 'usdc.near', amount: '1000000', to: roles.vendor.accountId }, { kind: 'contract', code: 'NO_LIMIT' });
 await expectRejected('spend: zero', agent, 'spend', { asset_id: 'near', amount: '0', to: roles.vendor.accountId }, { kind: 'contract', code: 'NON_POSITIVE_AMOUNT' });
 await expectRejected('spend: above the per-tx cap', agent, 'spend', { asset_id: 'near', amount: (ONE_NEAR * 2n).toString(), to: roles.vendor.accountId }, { kind: 'contract', code: 'PER_TX_LIMIT' });
+
+// 3b. the decision hash chain, on chain -------------------------------------
+// A refusal must not move the chain, an accepted spend must advance it by one, and the
+// head must be the hash the caller passed. This is the on-chain half of the audit story.
+const chainBefore = Number(await view('get_decision_count'));
+const headBefore = String(await view('get_last_decision_hash'));
+await expectRejected('chain: a refused spend', agent, 'spend', { asset_id: 'near', amount: (ONE_NEAR * 5n).toString(), to: roles.vendor.accountId }, { kind: 'contract', code: 'PER_TX_LIMIT' });
+const chainAfterRefusal = Number(await view('get_decision_count'));
+const headAfterRefusal = String(await view('get_last_decision_hash'));
+results.push({
+  case: 'chain: a refusal does not advance it',
+  expect: `count ${chainBefore}, head ${headBefore.slice(0, 8)}`,
+  actual: `count ${chainAfterRefusal}, head ${headAfterRefusal.slice(0, 8)}`,
+  ok: chainAfterRefusal === chainBefore && headAfterRefusal === headBefore,
+});
+
+const acceptedHash = hashObject({ chain: 'accepted', at: Date.now() });
+await agent.signAndSendTransaction({
+  receiverId: contract,
+  actions: [actions.functionCall('spend', { asset_id: 'near', amount: '1', to: roles.vendor.accountId, decision_hash: acceptedHash }, GAS, 0n)],
+});
+const chainAfterSpend = Number(await view('get_decision_count'));
+const headAfterSpend = String(await view('get_last_decision_hash'));
+results.push({ case: 'chain: an accepted spend advances it by one', expect: String(chainBefore + 1), actual: String(chainAfterSpend), ok: chainAfterSpend === chainBefore + 1 });
+// The contract does not store the submitted hash: it stores the next link,
+// sha256(previous_head || decision_hash). Reproduce it here so the check asserts the
+// exact formula rather than "something changed".
+const expectedHead = createHash('sha256').update(Buffer.from(headBefore + acceptedHash, 'utf8')).digest('hex');
+results.push({ case: 'chain: the head is sha256(previous || decision)', expect: expectedHead, actual: headAfterSpend, ok: headAfterSpend === expectedHead });
+
+// 3c. the contract refuses policies it cannot enforce, and the allow list is live --
+const baseline = (await view('get_config')) as {
+  policy_hash: string;
+  allowlist: string[];
+  limits: { asset_id: string; per_tx: string; daily: string; monthly: string }[];
+};
+await expectRejected(
+  'set_policy: per_tx above daily is refused',
+  owner,
+  'set_policy',
+  { policy_hash: hashObject({ bad: 'per-tx' }), limits: [{ asset_id: 'near', per_tx: (ONE_NEAR * 3n).toString(), daily: ONE_NEAR.toString(), monthly: '0' }], allowlist: [roles.vendor.accountId] },
+  { kind: 'any' },
+);
+await expectRejected(
+  'set_policy: a duplicate asset_id is refused',
+  owner,
+  'set_policy',
+  {
+    policy_hash: hashObject({ bad: 'duplicate' }),
+    limits: [
+      { asset_id: 'near', per_tx: '1000', daily: '2000', monthly: '0' },
+      { asset_id: 'near', per_tx: '1000', daily: '2000', monthly: '0' },
+    ],
+    allowlist: [roles.vendor.accountId],
+  },
+  { kind: 'any' },
+);
+
+const narrowedHash = hashObject({ temporary: 'allowlist', at: 'conformance' });
+await setPolicy(baseline.limits, [roles.agent.accountId], narrowedHash, 'set_policy(allowlist without the vendor)');
+const narrowed = (await view('get_config')) as { policy_hash: string };
+results.push({ case: 'policy: the pinned hash follows the policy', expect: narrowedHash, actual: narrowed.policy_hash, ok: narrowed.policy_hash === narrowedHash });
+await expectView('allowlist: the vendor is no longer payable', 'check', { asset_id: 'near', amount: '1', to: roles.vendor.accountId }, 'deny:RECIPIENT_NOT_ALLOWED');
+await setPolicy(baseline.limits, baseline.allowlist, baseline.policy_hash, 'set_policy(restore)');
+await expectView('allowlist: the vendor is payable again', 'check', { asset_id: 'near', amount: '1', to: roles.vendor.accountId }, 'allow');
 
 // 4. the agent key cannot reach the owner's surface --------------------------
 await expectRejected('agent calls set_paused', agent, 'set_paused', { paused: true }, { kind: 'key' });

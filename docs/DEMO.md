@@ -18,7 +18,7 @@ as they are:
 | [`shots/demo.png`](shots/demo.png) | `npm run demo`: allowed payment, approval, three refusals, live 1Click quote, redirected quote refused, human approval, audit verified, tamper detected |
 | [`shots/attack.png`](shots/attack.png) | `npm run attack`: all 29 escape attempts with the wall each one hit |
 | [`shots/testnet.png`](shots/testnet.png) | the recorded testnet run: deploy, policy install, one allowed spend, one reverted overspend, one key-level refusal, on-chain state |
-| [`shots/conformance.png`](shots/conformance.png) | 28/28 conformance checks against the deployed contract, with the deny reason read from the on-chain event |
+| [`shots/conformance.png`](shots/conformance.png) | 37/37 conformance checks against the deployed contract, with the deny reason read from the on-chain event |
 
 They are **not** retouched screenshots: they are images of the real stdout,
 rendered by [`scripts/render_terminal.py`](../scripts/render_terminal.py), which
@@ -120,7 +120,7 @@ was stopped.
 destination pinned to the agent's MPC-derived chain-signature address.
 
 7/ 29 adversarial escape attempts: 26 refused, 1 escalated to a human, 2 legitimate
-payments allowed. 94 tests, 28/28 conformance checks against the deployed contract. No
+payments allowed. 94 tests, 37/37 conformance checks against the deployed contract. No
 wallet needed to reproduce.
 
 8/ Repo: https://github.com/Bronxydrone/Veto

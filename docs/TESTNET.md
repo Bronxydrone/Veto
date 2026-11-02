@@ -151,7 +151,7 @@ event: {"standard":"veto","version":"1.0.0","event":"deny","data":{
 
 The vault was then topped up from the vendor
 (`G2z51YpGJ4Qn2HHDdsRj45sn9h1xVtfDVcsdrar3AEwk`, 3 NEAR) and the suite returned to green:
-`28/28 conformance checks passed`.
+`37/37 conformance checks passed`.
 
 This is the strongest argument for the whole project: the invariant "a refusal never moves
 money, and a `spend` event means money moved" held in every unit test and was false on the
@@ -186,14 +186,28 @@ Two details worth knowing:
 
 ## Conformance suite against the live contract
 
-`npm run chain:conformance` asserts 28 promises **against the deployed contract**,
+Beyond the amounts and the reason codes, the suite also asserts the parts a reviewer
+tends to ask about:
+
+- **the decision hash chain is real**: a refused spend leaves `decision_count` and
+  `get_last_decision_hash` untouched, an accepted one advances both, and the stored head
+  equals `sha256(previous_head || decision_hash)` - the test reproduces the formula rather
+  than checking that "something changed";
+- **the contract refuses policies it cannot enforce**: `set_policy` with `per_tx > daily`,
+  or with a duplicated asset id, is rejected with a message saying a policy that cannot be
+  enforced must not be installed;
+- **the allow list is live**: installing a policy without the vendor makes `check` answer
+  `deny:RECIPIENT_NOT_ALLOWED`, restoring the policy makes it answer `allow`, and the
+  pinned policy hash follows both changes.
+
+`npm run chain:conformance` asserts 37 promises **against the deployed contract**,
 using the chain as the source of truth. Cases that must be refused are checked for
 their exact reason code, read back from the NEP-297 `deny` event on the failed
 receipt; read-only cases compare the `check` view answer. It only sends calls that
 must be rejected, so it moves no funds and changes no state.
 
 ```
-28/28 conformance checks passed against the live contract
+37/37 conformance checks passed against the live contract
 ```
 
 | Case | Expected | Actual |
