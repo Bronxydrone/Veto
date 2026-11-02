@@ -28,6 +28,7 @@
     "chain:daily": "node scripts/testnet-daily-cap.ts",
     "chain:ft": "node scripts/testnet-ft.ts",
     "chain:rotate": "node scripts/testnet-rotate-agent.ts",
+    "chain:topup": "node scripts/testnet-topup.ts",
     "chain:conformance": "node scripts/testnet-conformance.ts",
     "chain:show": "node scripts/show-testnet-run.ts",
     "submit:check": "node scripts/submit.mjs"
