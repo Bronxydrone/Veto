@@ -513,9 +513,11 @@ the owner executes at approval time, so there is nothing left for the agent to r
 
 ## 11. Submission artefacts
 
-- [`docs/shots/veto-demo.mp4`](docs/shots/veto-demo.mp4) — a 49-second walkthrough built
-  from the real command output (nine cards: what it is, `demo`, `attack`, testnet,
-  conformance, repo). No screen recording, no editing; every number is stdout.
+- [`docs/shots/veto-demo.mp4`](docs/shots/veto-demo.mp4) — a 58-second narrated walkthrough
+  built from the real command output (nine cards: what it is, `demo`, `attack`, testnet,
+  conformance, the bug, the agent loop, repo). The voice is the author's; the script is in
+  [`docs/NARRATION.md`](docs/NARRATION.md). No screen recording, no editing; every number is
+  stdout.
 - [`docs/DEMO.md`](docs/DEMO.md) — the video shot list, the screenshot list, and the X
   post text.
 - [`docs/SUBMISSION.md`](docs/SUBMISSION.md) — the fields only a human can provide,
