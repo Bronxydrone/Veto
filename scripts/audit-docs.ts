@@ -20,6 +20,7 @@ const scripts = new Set(Object.keys(packageJson.scripts ?? {}));
 
 const documents = [
   'README.md',
+  'SECURITY.md',
   'AGENTS.md',
   'docs/DEMO.md',
   'docs/FAQ.md',

@@ -526,6 +526,12 @@ the owner executes at approval time, so there is nothing left for the agent to r
 
 ---
 
-## 12. Licence
+## 12. Security policy
+
+What is in scope, what is deliberately out of scope, what is known to be missing, and how
+to report a hole: [`SECURITY.md`](SECURITY.md). The threat model with the reasoning behind
+each limit is in [`docs/THREAT-MODEL.md`](docs/THREAT-MODEL.md).
+
+## 13. Licence
 
 MIT. Built at NEAR HACKATHON, November 2026.
