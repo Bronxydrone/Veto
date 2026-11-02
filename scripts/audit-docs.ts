@@ -41,12 +41,13 @@ const problems: Problem[] = [];
 let commandsChecked = 0;
 let pathsChecked = 0;
 
-/** Paths that are deliberately illustrative rather than real. */
-const IGNORE_PATHS = new Set([
-  'docs/shots/video/',
-  'data/',
-  'node_modules/',
-]);
+/**
+ * Paths that are legitimately absent from a clean checkout. `data/` holds the testnet key
+ * files and the run artefacts: the docs must be able to mention them (`data/testnet-roles.json`
+ * is where the scripts look), but they are gitignored, so a CI clone will not have them.
+ */
+const IGNORE_PATHS = new Set(['docs/shots/video/', 'node_modules/']);
+const isIgnored = (path: string): boolean => path.startsWith('data/') || IGNORE_PATHS.has(path);
 
 for (const document of documents) {
   const absolute = join(root, document);
@@ -66,7 +67,7 @@ for (const document of documents) {
   // Backticked repository paths: src/..., docs/..., contract/..., examples/..., test/...
   for (const match of text.matchAll(/`((?:src|docs|contract|examples|test|data|scripts)\/[A-Za-z0-9._/-]+)`/g)) {
     const candidate = match[1];
-    if (candidate.includes('*') || IGNORE_PATHS.has(candidate)) continue;
+    if (candidate.includes('*') || isIgnored(candidate)) continue;
     pathsChecked += 1;
     const absolutePath = join(root, candidate);
     const ok = existsSync(absolutePath) || existsSync(join(dirname(absolute), candidate));
