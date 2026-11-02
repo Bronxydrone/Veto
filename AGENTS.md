@@ -13,7 +13,7 @@ vault, with a human approval queue and a hash-chained audit trail.
 ## Verify it in 60 seconds, without installing anything
 
 ```bash
-npm run test:all     # 89 tests, 0 failures, no network, no node_modules needed
+npm run test:all     # 94 tests, 0 failures, no network, no node_modules needed
 npm run attack       # 29 escape attempts, every verdict asserted
 npm run demo         # narrative: allow / deny / approval / live quote / audit
 npm run serve        # dashboard on :8787 (also dependency-free)

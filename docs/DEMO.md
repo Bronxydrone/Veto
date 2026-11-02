@@ -9,6 +9,7 @@ as they are:
 
 | File | What it shows |
 |---|---|
+| [`shots/agent.png`](shots/agent.png) | `npm run agent`: three tasks, three outcomes, no limit crossed |
 | [`shots/story.png`](shots/story.png) | `npm run story`: one agent, one wallet, five beats of a very bad day |
 | [`shots/bug.png`](shots/bug.png) | The bug the network found: budget written, transfer failed, and the fix that refuses before writing |
 | [`shots/preflight.png`](shots/preflight.png) | `npm run preflight`: 16/16 green - the repository is shippable right now |
@@ -119,7 +120,7 @@ was stopped.
 destination pinned to the agent's MPC-derived chain-signature address.
 
 7/ 29 adversarial escape attempts: 26 refused, 1 escalated to a human, 2 legitimate
-payments allowed. 89 tests, 28/28 conformance checks against the deployed contract. No
+payments allowed. 94 tests, 28/28 conformance checks against the deployed contract. No
 wallet needed to reproduce.
 
 8/ Repo: https://github.com/Bronxydrone/Veto
