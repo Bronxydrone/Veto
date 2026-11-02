@@ -34,6 +34,7 @@ steps above work on a bare checkout.
 | `src/chain/intents.ts` | NEAR Intents (1Click) client; `snapshotFromQuote` maps venue ids to policy ids |
 | `src/chain/chainsig.ts` | MPC address derivation (keccak-256 + base58, no deps) |
 | `src/app/` | dashboard server + page (no build step) |
+| `src/integrations/loop.ts` | what the agent does with a refusal: reason code -> next legal step, with hard stops |
 | `contract/src/lib.rs` | Rust vault: limits, allow list, pause, decision hash chain, deny events |
 | `docs/` | threat model, testnet evidence, demo script, submission checklist |
 
@@ -58,6 +59,8 @@ steps above work on a bare checkout.
 - New policy rule: add the check in `engine.ts`, a reason code in `REASON`, a
   scenario in `scenarios.ts`, and a unit test in `test/unit/core.test.ts`.
 - New dashboard endpoint: `src/app/server.ts` (JSON errors only, `{ error }`).
+- New command in the docs: it is checked by `npm run audit:docs` (part of preflight), so the
+  script must exist in `package.json` before the README can mention it.
 - Rebuild the contract: `cd contract && ./build.ps1` (`cargo build --release
   --target wasm32-unknown-unknown` + copy to `contract/res/`).
 - Rebuild the demo images: see `docs/DEMO.md` §A0.

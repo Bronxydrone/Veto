@@ -16,6 +16,25 @@ No keys and no faucet? `npm run chain:show` prints the recorded evidence below f
 [`testnet-run.json`](testnet-run.json) — public account ids, transaction hashes and
 state reads only, no private keys.
 
+## The suite, re-run against the live contract
+
+`npm run chain:conformance` is the part a reviewer is most likely to run, and it is meant
+to be re-run rather than trusted: it moves 1 yoctoNEAR at a time (the arithmetic of a limit
+does not need real value), reads refuse reasons back from the emitted events, and restores
+every policy it touches in a `finally` block.
+
+Last full run: **37/37**, twice in a row, on 2026-11-02 against contract
+`5ac5ef1f12f81b18d16d05b038e9168bc92f5adfbf7a61994fc6345e34929633`. It asserts, among
+other things, that a refused spend leaves the decision chain untouched, that an accepted one
+advances it by one, that the stored head equals `sha256(previous_head || decision_hash)`,
+that the contract refuses to install a policy it cannot enforce, and that removing the vendor
+from the allow list flips `check()` to `deny:RECIPIENT_NOT_ALLOWED`.
+
+The vault needs room to breathe: the 300 KB wasm counts as a ~3 NEAR storage stake, so if
+`available` (balance minus `storage_usage * storage_byte_cost`) runs low, `spend` refuses
+with `INSUFFICIENT_BALANCE` by design. `npm run chain:topup` puts testnet NEAR back from the
+vendor account when that happens.
+
 ## Accounts
 
 | Role | Account | Notes |

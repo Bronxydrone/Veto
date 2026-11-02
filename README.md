@@ -417,16 +417,17 @@ src/core/          money, policy DSL, ledger, audit, the pure engine, the statef
 src/core/engine.ts one pure function, ~19–20 checks, no I/O
 src/core/service.ts approvals, reservations, re-checks, persistence
 src/chain/         NEAR Intents (1Click) client, chain signatures (MPC) helper
-src/integrations/  GatedToolbox: drop-in wrapper for paid agent tools
+src/integrations/  GatedToolbox (paid tool calls) + loop.ts (what the agent does after a refusal)
 src/demo/          the scenario catalogue shared by CLI, UI and tests
 src/cli/           veto demo | attack | quote | chainsig | evaluate | audit
 src/app/           dependency-free HTTP server + dashboard (no build step)
 examples/          the policy a human writes + three example actions
 contract/          Rust policy vault (near-sdk 5.29), owner/agent separation, 31 tests
 test/unit/         94 tests: money, YAML, policy, engine, toolbox, chain signatures
-test/adversarial/  catalogue assertions + stateful attacks
+test/adversarial/  catalogue assertions, stateful attacks, 1000 random actions
 scripts/           testnet accounts/demo, submission validator, terminal-image renderer
 docs/              threat model, testnet evidence, demo script, submission checklist
+scripts/           testnet runs, benchmarks, the docs audit, image and video rendering
 docs/shots/        demo, attack, testnet, preflight and dashboard images rendered from real output
 data/fixtures/     one recorded live 1Click quote (offline reproducibility)
 ```
