@@ -67,7 +67,7 @@ SLIDES = [
     ),
     (
         "5. Every refusal says why, on-chain too",
-        "28/28 conformance checks against the deployed contract, incl. the kill switch",
+        "37/37 conformance checks against the deployed contract, incl. the kill switch",
         "npm run chain:conformance",
         "conformance.png",
         FG,
@@ -78,6 +78,13 @@ SLIDES = [
         "npm run chain:conformance",
         "bug.png",
         RED,
+    ),
+    (
+        "7. The agent half: it adapts, gives up, or waits",
+        "refused once, it reads the reason and buys a legal tier; a denied recipient is a hard stop",
+        "npm run agent",
+        "agent.png",
+        GREEN,
     ),
     (
         "Veto",

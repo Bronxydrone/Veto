@@ -63,6 +63,12 @@ const assets = [
   'docs/shots/attack.png',
   'docs/shots/testnet.png',
   'docs/shots/conformance.png',
+  'docs/shots/story.png',
+  'docs/shots/bug.png',
+  'docs/shots/agent.png',
+  'docs/shots/preflight.png',
+  'docs/shots/dashboard.png',
+  'docs/shots/approvals.png',
   'docs/shots/veto-demo.mp4',
   'docs/testnet-run.json',
   'contract/res/veto_policy.wasm',
@@ -131,6 +137,27 @@ try {
 } catch (err) {
   add('submission payload is valid', false, (err as Error).message.slice(0, 80));
 }
+
+// The numbers the README quotes must match the artefacts that produced them, otherwise
+// a reader has to take the claims on faith.
+const conformancePath = join(root, 'data', 'testnet-conformance.json');
+if (existsSync(conformancePath)) {
+  try {
+    const record = JSON.parse(readFileSync(conformancePath, 'utf8')) as { passed?: number; total?: number };
+    const claim = `${record.passed}/${record.total}`;
+    add('conformance matches the README', read('README.md').includes(claim), `${claim} in data/testnet-conformance.json`);
+  } catch (err) {
+    add('conformance matches the README', false, (err as Error).message.slice(0, 80));
+  }
+} else {
+  add('conformance matches the README', null, 'no data/testnet-conformance.json on this machine');
+}
+
+add(
+  'scenario count matches the README',
+  read('README.md').includes(`${CATALOGUE.length} ways out of the walls`) || read('README.md').includes(`the same ${CATALOGUE.length} scenarios`),
+  `${CATALOGUE.length} in the catalogue`,
+);
 
 add('secrets are gitignored', read('.gitignore').includes('data/*.json'), 'data/*.json ignored, fixtures excepted');
 

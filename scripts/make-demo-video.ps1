@@ -37,7 +37,7 @@ Push-Location docs/shots/video
 try {
     # Each slide is held for a few seconds; the final slide is listed twice because
     # the concat demuxer ignores the duration of the last entry.
-    $durations = @(3.0, 5.0, 5.5, 6.0, 6.0, 5.0, 5.5, 4.0)
+    $durations = @(3.0, 5.0, 5.5, 6.0, 6.0, 5.0, 5.0, 5.5, 4.0)
     $lines = @()
     for ($i = 0; $i -lt $durations.Count; $i++) {
         $name = "slide{0:D2}.png" -f $i
