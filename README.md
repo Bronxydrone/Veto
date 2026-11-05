@@ -530,25 +530,23 @@ the owner executes at approval time, so there is nothing left for the agent to r
 
 ## 12. How this was built
 
-This project was built inside the hackathon window by a human and an AI coding agent working
-together. The agent wrote the bulk of the code; **Boris Tarantin** chose the product, the
-scope and the trade-offs, decided what to build next, and reviewed every claim that appears
-here. He can explain and defend any part of it.
+Built by **Boris Tarantin** in the hackathon window, working with an AI coding agent as the
+pair: the agent typed most of the code, the human chose the product, the scope, the limits and
+the trade-offs, and reviewed what shipped. The hands are shared; the decisions and the
+responsibility are his.
 
-The rules allow this and ask for it to be listed rather than hidden
-([`HACKATHON.md`](https://nearhackathon.com/HACKATHON.md), Q-005: "All allowed, including own
-pre-hackathon libs and AI code. List in README"), which is why this section exists. The same
-document states that Claude Code and Codex screen every project before the human jury, so the
-repository is written to be *checked* rather than trusted: every quantitative claim here maps
-to a command that recomputes it.
+[`HACKATHON.md`](https://nearhackathon.com/HACKATHON.md) allows AI-assisted code and asks for it
+to be listed (Q-005), which is why this section exists, and the same document says Claude Code
+and Codex screen every project before the human jury (Q-017). That is the right test for a
+project like this one: not *who typed it*, but *does it work when someone else runs it*.
 
-What that means in practice:
+So every quantitative claim in this README is tied to a command that recomputes it:
 
-- the testnet transactions in [`docs/TESTNET.md`](docs/TESTNET.md) are on chain and can be
-  opened in an explorer;
+- the testnet transactions in [`docs/TESTNET.md`](docs/TESTNET.md) are on chain and open in an
+  explorer;
 - `npm run chain:conformance` re-reads the deployed contract and prints pass/fail per check;
-- `npm run preflight` re-derives the numbers this README quotes (wasm size and hash, test
-  count, conformance count, every command and path named in the docs);
+- `npm run preflight` re-derives the numbers quoted here (wasm size and hash, test count,
+  conformance count, every command and path named in the docs);
 - CI runs the engine and contract suites on every push, and the badge at the top is live.
 
 ## 13. Security policy
