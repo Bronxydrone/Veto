@@ -20,6 +20,11 @@ contract (deny reasons read back from the on-chain events), 29 adversarial scena
 asserted verdicts, 1000 random actions checked against the invariants, and 31 contract tests
 on a real NEAR VM. Nothing to install, nothing to trust:
 
+**Or open it in a browser, without installing anything:** the same engine and the same
+policy, compiled to a static page -
+<https://raw.githack.com/Bronxydrone/Veto/main/docs/demo/index.html> (source in
+[`docs/demo/`](docs/demo/index.html), 22 KB of JavaScript, no server, nothing leaves the tab).
+
 ```bash
 npm run story     # the use case in five beats, 40 seconds, offline
 npm run attack    # 29 ways out of the walls, every verdict asserted
