@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Veto — policy firewall for AI agents, running in your browser</title>
+    <style>
+      :root {
+        --bg: #0a0f16;
+        --panel: #101620;
+        --panel2: #0d121a;
+        --line: #1d2733;
+        --line-soft: #17202b;
+        --fg: #e6edf3;
+        --dim: #8b949e;
+        --green: #3fb97f;
+        --red: #f85149;
+        --amber: #d29922;
+        --accent: #58a6ff;
+        --mono: ui-monospace, SFMono-Regular, "Cascadia Mono", Consolas, monospace;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: radial-gradient(1200px 600px at 20% -10%, #16202c 0%, var(--bg) 55%);
+        color: var(--fg);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        line-height: 1.5;
+      }
+      .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 64px; }
+      header h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: -0.01em; }
+      header p { margin: 0; color: var(--dim); font-size: 14px; }
+      header a { color: var(--accent); text-decoration: none; }
+      .policy {
+        margin: 18px 0 22px; padding: 12px 14px; border: 1px solid var(--line);
+        border-radius: 12px; background: var(--panel2); font-family: var(--mono); font-size: 12px; color: var(--dim);
+      }
+      .policy b { color: var(--fg); font-weight: 600; }
+      .cols { display: grid; grid-template-columns: 340px 1fr; gap: 18px; align-items: start; }
+      @media (max-width: 820px) { .cols { grid-template-columns: 1fr; } }
+      .panel { background: linear-gradient(180deg, var(--panel) 0%, var(--panel2) 100%); border: 1px solid var(--line); border-radius: 14px; padding: 14px 15px 16px; }
+      .panel h2 { margin: 0 0 12px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); font-weight: 600; }
+      label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dim); margin: 10px 0 4px; }
+      select, input {
+        width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line);
+        background: #0b1118; color: var(--fg); font-family: var(--mono); font-size: 13px;
+      }
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .actions { display: flex; gap: 8px; margin-top: 14px; }
+      button {
+        flex: 1; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--line);
+        background: #16202b; color: var(--fg); font-size: 13px; cursor: pointer;
+      }
+      button.primary { background: #1f6feb; border-color: #1f6feb; font-weight: 600; }
+      button:hover { filter: brightness(1.15); }
+      .presets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+      .presets button { flex: 0 0 auto; font-size: 11px; padding: 5px 9px; color: var(--dim); }
+      .verdict { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; }
+      .verdict.allow { background: rgba(63, 185, 127, 0.14); color: var(--green); border: 1px solid rgba(63, 185, 127, 0.35); }
+      .verdict.deny { background: rgba(248, 81, 73, 0.14); color: var(--red); border: 1px solid rgba(248, 81, 73, 0.35); }
+      .verdict.require_approval { background: rgba(210, 153, 34, 0.14); color: var(--amber); border: 1px solid rgba(210, 153, 34, 0.35); }
+      .card { border: 1px solid var(--line); border-left: 3px solid var(--dim); border-radius: 10px; background: #0c1219; padding: 11px 13px; margin-bottom: 10px; }
+      .card.allow { border-left-color: var(--green); }
+      .card.deny { border-left-color: var(--red); }
+      .card.require_approval { border-left-color: var(--amber); }
+      .card .head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+      .card .amount { font-family: var(--mono); }
+      .card .dest { color: var(--dim); font-family: var(--mono); font-size: 12px; }
+      .codes { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+      .code { font-family: var(--mono); font-size: 10px; padding: 2px 6px; border-radius: 5px; border: 1px solid var(--line); color: var(--dim); }
+      .code.deny { color: var(--red); border-color: rgba(248, 81, 73, 0.4); }
+      .code.approval { color: var(--amber); border-color: rgba(210, 153, 34, 0.4); }
+      details { margin-top: 8px; border-top: 1px solid var(--line-soft); padding-top: 7px; }
+      summary { cursor: pointer; font-size: 11px; color: var(--dim); }
+      ul.checks { list-style: none; margin: 8px 0 0; padding: 0; font-family: var(--mono); font-size: 11px; }
+      ul.checks li { padding: 3px 0; border-bottom: 1px dashed var(--line-soft); display: flex; gap: 8px; }
+      ul.checks li:last-child { border-bottom: 0; }
+      .mark { width: 12px; flex: 0 0 12px; }
+      .ok { color: var(--green); }
+      .bad { color: var(--red); }
+      .skip { color: var(--dim); }
+      .detail { color: var(--dim); }
+      .budget { margin-top: 14px; font-family: var(--mono); font-size: 11px; color: var(--dim); }
+      .bar { height: 6px; border-radius: 999px; background: #1a2431; overflow: hidden; margin: 4px 0 10px; }
+      .fill { height: 100%; background: var(--green); }
+      .empty { color: var(--dim); font-size: 13px; }
+      footer { margin-top: 26px; color: var(--dim); font-size: 12px; }
+      footer code { font-family: var(--mono); color: var(--fg); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <h1>Veto — the policy decides, in your browser</h1>
+        <p>
+          This page runs the real decision engine (<code>src/core/engine.ts</code>), bundled for the browser against
+          the shipped policy. Nothing is sent anywhere. Source:
+          <a href="https://github.com/Bronxydrone/Veto">github.com/Bronxydrone/Veto</a>
+        </p>
+      </header>
+
+      <div class="policy" id="policy">loading…</div>
+
+      <div class="cols">
+        <section class="panel">
+          <h2>Send an action to the policy</h2>
+          <label for="kind">Action kind</label>
+          <select id="kind">
+            <option value="ft.transfer">ft.transfer</option>
+            <option value="near.transfer">near.transfer</option>
+            <option value="api.pay">api.pay</option>
+            <option value="intent.swap">intent.swap</option>
+            <option value="key.add">key.add</option>
+          </select>
+
+          <div class="row">
+            <div>
+              <label for="asset">Asset</label>
+              <select id="asset"></select>
+            </div>
+            <div>
+              <label for="amount">Amount</label>
+              <input id="amount" value="5" inputmode="decimal" />
+            </div>
+          </div>
+
+          <label for="to">Recipient</label>
+          <input id="to" value="compute.near" />
+
+          <div class="actions">
+            <button class="primary" id="decide">Decide</button>
+            <button id="reset">Reset the day</button>
+          </div>
+
+          <div class="presets" id="presets"></div>
+
+          <div class="budget" id="budget"></div>
+        </section>
+
+        <section>
+          <div id="feed"><p class="empty">No decisions yet. Press “Decide”, or one of the presets.</p></div>
+        </section>
+      </div>
+
+      <footer>
+        The engine is the same module the CLI and the contract tests use; the policy is
+        <code>examples/policy.yaml</code>, compiled at build time. The page keeps its own simulated day, so clicking
+        twice does not trip the “5 seconds between transfers” rule, and the daily budget really does run out.
+      </footer>
+    </div>
+
+    <script src="./veto.js"></script>
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const info = Veto.info();
+      const policyBox = $("policy");
+      policyBox.innerHTML =
+        `policy <b>${info.policyName}</b> · hash <b>${info.policyHash.slice(0, 12)}</b> · ` +
+        `owner <b>${info.owner}</b> · agent <b>${info.agent}</b><br>` +
+        `pay only <b>${info.allow.join(", ")}</b> · never <b>${info.deny.join(", ")}</b> · ` +
+        `above <b>$${info.thresholdUsdCents ? Number(info.thresholdUsdCents) / 100 : "?"}</b> the owner co-signs`;
+
+      const assetSelect = $("asset");
+      for (const asset of info.assets) {
+        const option = document.createElement("option");
+        option.value = asset.id;
+        option.textContent = asset.id;
+        assetSelect.appendChild(option);
+      }
+      assetSelect.value = info.assets.some((a) => a.id === "USDC") ? "USDC" : info.assets[0].id;
+
+      const presets = [
+        ["5 USDC → compute.near", { kind: "ft.transfer", asset: "USDC", amount: "5", to: "compute.near" }],
+        ["40 USDC (over the cap)", { kind: "ft.transfer", asset: "USDC", amount: "40", to: "compute.near" }],
+        ["→ drainer.near", { kind: "ft.transfer", asset: "USDC", amount: "5", to: "drainer.near" }],
+        ["20 USDC (needs the owner)", { kind: "ft.transfer", asset: "USDC", amount: "20", to: "storage.near" }],
+        ["give itself a key", { kind: "key.add", asset: "NEAR", amount: "0.01", to: "compute.near" }],
+        ["2 NEAR → compute.near", { kind: "near.transfer", asset: "NEAR", amount: "2", to: "compute.near" }],
+      ];
+      for (const [label, preset] of presets) {
+        const button = document.createElement("button");
+        button.textContent = label;
+        button.addEventListener("click", () => {
+          $("kind").value = preset.kind;
+          $("asset").value = preset.asset;
+          $("amount").value = preset.amount;
+          $("to").value = preset.to;
+          decide();
+        });
+        $("presets").appendChild(button);
+      }
+
+      function renderBudget() {
+        const rows = Veto.budgets();
+        $("budget").innerHTML = rows
+          .map((row) => {
+            const used = Number(row.spent) / Number(row.limit || 1);
+            return `today ${row.asset}: ${row.spent} of ${row.limit} used<div class="bar"><div class="fill" style="width:${Math.min(100, used * 100).toFixed(1)}%"></div></div>`;
+          })
+          .join("");
+      }
+
+      function card(decision) {
+        const failed = decision.checks.filter((check) => !check.passed).length;
+        const codes = decision.reasons
+          .map((reason) => `<span class="code ${reason.severity}">${reason.code}</span>`)
+          .join("");
+        const checks = decision.checks
+          .map(
+            (check) =>
+              `<li><span class="mark ${check.passed ? "ok" : "bad"}">${check.passed ? "✓" : "✗"}</span>` +
+              `<span><b>${check.title}</b><br><span class="detail">${check.detail}</span></span></li>`,
+          )
+          .join("");
+        return `<article class="card ${decision.verdict}">
+          <div class="head">
+            <span class="verdict ${decision.verdict}">${decision.verdict.replace("_", " ").toUpperCase()}</span>
+            <span class="amount">${decision.amount} ${decision.asset}</span>
+            <span class="dest">→ ${decision.kind}</span>
+            <span class="dest">${decision.evaluatedAt.replace("T", " ").slice(0, 19)}</span>
+          </div>
+          ${codes ? `<div class="codes">${codes}</div>` : ""}
+          <details ${decision.verdict === "allow" ? "" : "open"}>
+            <summary>${decision.checks.length} checks · ${failed} failed</summary>
+            <ul class="checks">${checks}</ul>
+          </details>
+          <div class="codes"><span class="code">fingerprint ${decision.fingerprint.slice(0, 12)}</span>
+            ${decision.limits.daily ? `<span class="code">daily ${decision.limits.daily.spent} of ${decision.limits.daily.limit}</span>` : ""}
+            ${decision.limits.perTx ? `<span class="code">per-tx cap ${decision.limits.perTx}</span>` : ""}</div>
+        </article>`;
+      }
+
+      let count = 0;
+      function decide() {
+        const feed = $("feed");
+        if (count === 0) feed.innerHTML = "";
+        const decision = Veto.decide({
+          kind: $("kind").value,
+          asset: $("asset").value,
+          amount: $("amount").value,
+          to: $("to").value.trim(),
+        });
+        count += 1;
+        feed.insertAdjacentHTML("afterbegin", card(decision));
+        renderBudget();
+      }
+
+      $("decide").addEventListener("click", decide);
+      $("reset").addEventListener("click", () => {
+        Veto.reset();
+        count = 0;
+        $("feed").innerHTML = '<p class="empty">No decisions yet. Press “Decide”, or one of the presets.</p>';
+        renderBudget();
+      });
+      renderBudget();
+    </script>
+  </body>
+</html>

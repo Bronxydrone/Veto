@@ -18,6 +18,9 @@
     "agent": "node src/cli/agent.ts",
     "bench": "node scripts/bench.ts",
     "audit:docs": "node scripts/audit-docs.ts",
+    "demo:build": "node scripts/build-demo.ts",
+    "demo:bundle": "esbuild src/browser/main.ts --bundle --format=iife --global-name=Veto --minify --alias:node:crypto=./src/browser/crypto-shim.ts --outfile=docs/demo/veto.js",
+    "demo:check": "node scripts/check-demo.ts",
     "demo": "node src/cli/veto.ts demo",
     "attack": "node src/cli/veto.ts attack",
     "quote": "node src/cli/veto.ts quote",
@@ -36,6 +39,8 @@
     "submit:check": "node scripts/submit.mjs"
   },
   "devDependencies": {
+    "@esbuild/win32-x64": "^0.28.2",
+    "esbuild": "^0.28.2",
     "near-api-js": "^7.3.1"
   }
 }

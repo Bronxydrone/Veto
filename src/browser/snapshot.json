@@ -1,0 +1,185 @@
+{
+  "now": 1793620800000,
+  "prices": {
+    "NEAR": "2450000",
+    "USDC": "1000000",
+    "USDT": "1000000"
+  },
+  "doc": {
+    "version": 1,
+    "name": "argo-spending-policy",
+    "owner": "alice.near",
+    "agent": "argo.near",
+    "limits": {
+      "perTx": {
+        "NEAR": 1.5,
+        "USDC": 25
+      },
+      "daily": {
+        "NEAR": 5,
+        "USDC": 100
+      },
+      "monthly": {
+        "NEAR": 60,
+        "USDC": 800
+      },
+      "defaultPerTxUsd": 20
+    },
+    "counterparties": {
+      "mode": "strict",
+      "allow": [
+        "api.data-market.near",
+        "compute.near",
+        "storage.near"
+      ],
+      "deny": [
+        "drainer.near"
+      ],
+      "requireApprovalForNew": true
+    },
+    "approvals": {
+      "thresholdUsd": 10,
+      "approvers": [
+        "alice.near"
+      ],
+      "ttlSeconds": 900
+    },
+    "velocity": {
+      "maxTxPerHour": 6,
+      "minIntervalSeconds": 5
+    },
+    "actions": {
+      "allow": [
+        "near.transfer",
+        "ft.transfer",
+        "intent.swap",
+        "api.pay"
+      ],
+      "deny": [
+        "key.add",
+        "key.delete",
+        "contract.call",
+        "stake.delegate"
+      ]
+    },
+    "intents": {
+      "venues": [
+        "near-intents"
+      ],
+      "maxSlippageBps": 100,
+      "requireAllowlistedDestination": true,
+      "allowedDestinations": [
+        "0x583ddbf02324f75c3963c45686d52afaf2368c2f"
+      ]
+    },
+    "risk": {
+      "escalateAboveBudgetFraction": 0.8,
+      "escalateOnNewCounterparty": true
+    }
+  },
+  "hash": "aec57ca4a000340f31b0b95da8da35390b159797a2cf22c6810b8f5f89f7232a",
+  "assets": [
+    [
+      "NEAR",
+      {
+        "id": "NEAR",
+        "decimals": 24
+      }
+    ],
+    [
+      "USDC",
+      {
+        "id": "USDC",
+        "decimals": 6
+      }
+    ],
+    [
+      "USDT",
+      {
+        "id": "USDT",
+        "decimals": 6
+      }
+    ]
+  ],
+  "limits": {
+    "perTx": [
+      [
+        "NEAR",
+        "1500000000000000000000000"
+      ],
+      [
+        "USDC",
+        "25000000"
+      ]
+    ],
+    "daily": [
+      [
+        "NEAR",
+        "5000000000000000000000000"
+      ],
+      [
+        "USDC",
+        "100000000"
+      ]
+    ],
+    "monthly": [
+      [
+        "NEAR",
+        "60000000000000000000000000"
+      ],
+      [
+        "USDC",
+        "800000000"
+      ]
+    ],
+    "defaultPerTxUsdCents": "2000"
+  },
+  "allow": [
+    "api.data-market.near",
+    "compute.near",
+    "storage.near"
+  ],
+  "deny": [
+    "drainer.near"
+  ],
+  "strictCounterparties": true,
+  "requireApprovalForNew": true,
+  "allowedActions": [
+    "near.transfer",
+    "ft.transfer",
+    "intent.swap",
+    "api.pay"
+  ],
+  "deniedActions": [
+    "key.add",
+    "key.delete",
+    "contract.call",
+    "stake.delegate"
+  ],
+  "approval": {
+    "thresholdUsdCents": "1000",
+    "approvers": [
+      "alice.near"
+    ],
+    "ttlSeconds": 900
+  },
+  "velocity": {
+    "maxTxPerHour": 6,
+    "minIntervalSeconds": 5
+  },
+  "intents": {
+    "venues": [
+      "near-intents"
+    ],
+    "maxSlippageBps": 100,
+    "requireAllowlistedDestination": true,
+    "allowedDestinations": [
+      "0x583ddbf02324f75c3963c45686d52afaf2368c2f"
+    ]
+  },
+  "risk": {
+    "escalateAboveBudgetFraction": 0.8,
+    "escalateOnNewCounterparty": true
+  },
+  "expiresAt": null
+}
