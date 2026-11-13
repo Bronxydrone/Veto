@@ -21,6 +21,7 @@
     "demo:build": "node scripts/build-demo.ts",
     "demo:bundle": "esbuild src/browser/main.ts --bundle --format=iife --global-name=Veto --minify --alias:node:crypto=./src/browser/crypto-shim.ts --outfile=docs/demo/veto.js",
     "demo:check": "node scripts/check-demo.ts",
+    "demo:check:page": "node scripts/check-demo-page.ts",
     "demo": "node src/cli/veto.ts demo",
     "attack": "node src/cli/veto.ts attack",
     "quote": "node src/cli/veto.ts quote",
