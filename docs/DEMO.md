@@ -120,7 +120,7 @@ was stopped.
 destination pinned to the agent's MPC-derived chain-signature address.
 
 7/ 29 adversarial escape attempts: 26 refused, 1 escalated to a human, 2 legitimate
-payments allowed. 94 tests, 37/37 conformance checks against the deployed contract. No
+payments allowed. 97 tests, 37/37 conformance checks against the deployed contract. No
 wallet needed to reproduce.
 
 8/ Repo: https://github.com/Bronxydrone/Veto
