@@ -35,6 +35,21 @@ The vault needs room to breathe: the 300 KB wasm counts as a ~3 NEAR storage sta
 with `INSUFFICIENT_BALANCE` by design. `npm run chain:topup` puts testnet NEAR back from the
 vendor account when that happens.
 
+## Reading these transactions as a machine
+
+The explorer links below go to `testnet.nearblocks.io`, which puts a bot check in front of
+crawlers: a script that fetches the page gets `403`, and a script that hammers the API gets
+`429`. The transactions themselves are real and indexed. If a link is blocked, the same record
+is available as JSON:
+
+```bash
+curl https://api-testnet.nearblocks.io/v1/txns/<transaction-hash>
+```
+
+That returns the receiver, the actions and the outcome - enough to check that the hash is a
+real `FUNCTION_CALL` to `5ac5ef1f...` and not a made-up string. All of the hashes in this
+document were spot-checked this way on 2026-11-14.
+
 ## Accounts
 
 | Role | Account | Notes |
