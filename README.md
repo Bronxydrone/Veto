@@ -22,7 +22,7 @@ on a real NEAR VM. Nothing to install, nothing to trust:
 
 **Or open it in a browser, without installing anything:** the same engine and the same
 policy, compiled to a static page -
-<https://raw.githack.com/Bronxydrone/Veto/main/docs/demo/index.html> (source in
+<https://bronxydrone.github.io/Veto/demo/> (source in
 [`docs/demo/`](docs/demo/index.html), 22 KB of JavaScript, no server, nothing leaves the tab).
 
 ```bash
